@@ -36,7 +36,7 @@ public class GameBattleUserLeftUI : GameUI<GameBattleUserLeftUI>
     {
         show();
 
-#if ( UNITY_ANDROID || UNITY_IPHONE )
+#if ( UNITY_ANDROID || UNITY_IOS )
         top = true;
 #endif
 

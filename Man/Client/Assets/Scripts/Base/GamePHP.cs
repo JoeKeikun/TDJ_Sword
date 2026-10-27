@@ -33,11 +33,17 @@ public class GamePHP : Singleton< GamePHP >
         return bytes;
     }
 
-#if UNITY_IPHONE
+#if UNITY_IOS
+    #if IOS_PERSONAL_DEV
+    // 个人开发模式：使用测试服务器接口，不连接iOS验证/支付服务器
+    string url = "https://sword.foxgames.cn/sqlRequestTest.php?sql=";
+    string urlLog = "https://sword.foxgames.cn/sqlRequestLog.php?str=";
+    #else
     string urlPay = "https://sword.foxgames.cn/requestIOSPay.php?";
     string url = "https://sword.foxgames.cn/sqlRequestIOS.php?sql=";
     string urlLog = "https://sword.foxgames.cn/sqlRequestLog.php?str=";
     string urlCheck = "https://sword.foxgames.cn/requestIOSCheck.php?";
+    #endif
 #elif UNITY_ANDROID
     string url = "https://sword.foxgames.cn/sqlRequestAndroid.php?sql=";
     string urlLog = "https://sword.foxgames.cn/sqlRequestLog.php?str=";
@@ -51,10 +57,10 @@ public class GamePHP : Singleton< GamePHP >
 
     public void phpSaveLog( string str )
     {
-#if UNITY_ANDORID
+#if UNITY_ANDROID
         str = " android " + str;
 #endif
-#if UNITY_IPHONE
+#if UNITY_IOS
         str = " iphone " + str;
 #endif
 #if !UNITY_EDITOR
@@ -64,7 +70,7 @@ public class GamePHP : Singleton< GamePHP >
 #endif
     }
 
-#if UNITY_IPHONE
+#if UNITY_IOS && !IOS_PERSONAL_DEV
 
     public void phpIOSCheck(string dat, phpCallback cb)
     {
@@ -79,7 +85,7 @@ public class GamePHP : Singleton< GamePHP >
         UnityWebRequest www = UnityWebRequest.Get(sql);
         yield return www.SendWebRequest();
 
-        if (www.isNetworkError || www.isHttpError)
+        if (www.result != UnityWebRequest.Result.Success)
         {
         }
         else
@@ -115,7 +121,7 @@ public class GamePHP : Singleton< GamePHP >
         UnityWebRequest www = UnityWebRequest.Get(sql);
         yield return www.SendWebRequest();
 
-        if (www.isNetworkError || www.isHttpError)
+        if (www.result != UnityWebRequest.Result.Success)
         {
         }
         else
@@ -197,7 +203,7 @@ public class GamePHP : Singleton< GamePHP >
         UnityWebRequest www = UnityWebRequest.Get( sql );
         yield return www.SendWebRequest();
 
-        if ( www.isNetworkError || www.isHttpError )
+        if ( www.result != UnityWebRequest.Result.Success )
         {
 #if UNITY_EDITOR
             Debug.Log( www.error );
@@ -230,7 +236,7 @@ public class GamePHP : Singleton< GamePHP >
         UnityWebRequest www = UnityWebRequest.Get( sql );
         yield return www.SendWebRequest();
         
-        if ( www.isNetworkError || www.isHttpError )
+        if ( www.result != UnityWebRequest.Result.Success )
         {
 #if UNITY_EDITOR
             Debug.Log( www.error );
@@ -261,7 +267,7 @@ public class GamePHP : Singleton< GamePHP >
         UnityWebRequest www = UnityWebRequest.Get( sql );
         yield return www.SendWebRequest();
 
-        if ( www.isNetworkError || www.isHttpError )
+        if ( www.result != UnityWebRequest.Result.Success )
         {
 #if UNITY_EDITOR
             Debug.Log( www.error );

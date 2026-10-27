@@ -93,6 +93,10 @@ public class GameUserData : Singleton<GameUserData>
     public int LastSkillID { set; get; }
     public int LastItemID { set; get; }
 
+    // 快速存档专用：临时改写战斗存档路径，null 时走默认的 SaveBattle.dat。
+    // 只在快速存档读写的那一次生效，用完立即清空，不影响原版战斗存档。
+    public string BattleSavePathOverride { set; get; }
+
     public int LastAttackID
     {
         get
@@ -285,26 +289,126 @@ public class GameUserData : Singleton<GameUserData>
         }
 #endif
 
-        timeData = Convert.ToInt32( DateTime.Now.Subtract( DateTime.Parse( "1970-01-01 00:00:00" ).ToLocalTime() ).TotalSeconds );
-
-        byte[] bytes;
-        int index = 0;
+        // buildSaveBytes() 内部会刷新 timeData
+        byte[] bytes = buildSaveBytes();
 
         if ( cloud )
         {
-            cloudSaveData[ n ] = new byte[ SAVEDAT_SIZE ];
-            bytes = cloudSaveData[ n ];
+            cloudSaveInfo[ n ].Stage = stage;
+            cloudSaveInfo[ n ].Proficiency = proficiency;
+            cloudSaveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
+            cloudSaveInfo[ n ].TurnCount = turnCountAll;
+            cloudSaveInfo[ n ].LV = unitBase[ 0 ].LV;
+            cloudSaveInfo[ n ].Time = time;
+            cloudSaveInfo[ n ].TimeData = timeData;
+        }
+        else
+        {
+            saveInfo[ n ].Stage = stage;
+            saveInfo[ n ].Proficiency = proficiency;
+            saveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
+            saveInfo[ n ].TurnCount = turnCountAll;
+            saveInfo[ n ].LV = unitBase[ 0 ].LV;
+            saveInfo[ n ].Time = time;
+            saveInfo[ n ].TimeData = timeData;
+        }
+
+
+        if ( cloud )
+        {
+            cloudSaveData[ n ] = bytes;
+
+            GameSLCloudUI.instance.showLoading();
+            GamePHP.instance.phpSave( n + GameDefine.MAX_SAVE , bytes , onCloudSave );
         }
         else
         {
 #if SWORD_CLOUD
-            saveDataCloud[ n ] = new byte[ SAVEDAT_SIZE ];
-            bytes = saveDataCloud[ n ];
+            saveDataCloud[ n ] = bytes;
+
+            GameSLUI.instance.showLoading();
+            GamePHP.instance.phpSave( n , bytes , onSaveCloud );
 #else
-            bytes = new byte[ SAVEDAT_SIZE ];
+            string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
+
+#if UNITY_EDITOR
+            Debug.Log( path );
+#endif
+
+            FileStream fs = new FileStream( path , FileMode.Create );
+
+            fs.Write( bytes , 0 , bytes.Length );
+            fs.Close();
+            fs.Dispose();
+
+            bytes = null;
 #endif
         }
 
+    }
+
+
+    public void load( int n , bool cloud , GameSceneType scene = GameSceneType.Camp )
+    {
+#if ( UNITY_ANDROID ) && !UNITY_EDITOR
+        if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
+        {
+            return;
+        }
+#endif
+
+        byte[] bytes = new byte[ SAVEDAT_SIZE ];
+
+        if ( cloud )
+        {
+            bytes = cloudSaveData[ n ];
+
+            if ( bytes == null )
+            {
+                return;
+            }
+        }
+        else
+        {
+#if SWORD_CLOUD
+            bytes = saveDataCloud[ n ];
+
+            if ( bytes == null )
+            {
+                return;
+            }
+#else
+            string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
+
+            if ( !File.Exists( path ) )
+            {
+                return;
+            }
+
+            FileStream fs = new FileStream( path , FileMode.Open );
+
+            fs.Read( bytes , 0 , SAVEDAT_SIZE );
+            fs.Close();
+            fs.Dispose();
+#endif
+        }
+
+
+
+        applySaveBytes( bytes );
+
+        GameSceneManager.instance.loadScene( scene , GameSceneLoadMode.Load );
+    }
+
+
+
+    /// <summary>把当前进度打包成存档字节，格式与 Save{n}.dat 完全一致</summary>
+    public byte[] buildSaveBytes()
+    {
+        timeData = Convert.ToInt32( DateTime.Now.Subtract( DateTime.Parse( "1970-01-01 00:00:00" ).ToLocalTime() ).TotalSeconds );
+
+        byte[] bytes = new byte[ SAVEDAT_SIZE ];
+        int index = 0;
 
         byte[] b = BitConverter.GetBytes( stage );
         copyBytes( ref bytes , ref b , ref index );
@@ -330,33 +434,10 @@ public class GameUserData : Singleton<GameUserData>
             copyBytes( ref bytes , ref b , ref index );
         }
 
-
         b = BitConverter.GetBytes( nextStage );
         copyBytes( ref bytes , ref b , ref index );
         b = BitConverter.GetBytes( gold );
         copyBytes( ref bytes , ref b , ref index );
-
-        if ( cloud )
-        {
-            cloudSaveInfo[ n ].Stage = stage;
-            cloudSaveInfo[ n ].Proficiency = proficiency;
-            cloudSaveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
-            cloudSaveInfo[ n ].TurnCount = turnCountAll;
-            cloudSaveInfo[ n ].LV = unitBase[ 0 ].LV;
-            cloudSaveInfo[ n ].Time = time;
-            cloudSaveInfo[ n ].TimeData = timeData;
-        }
-        else
-        {
-            saveInfo[ n ].Stage = stage;
-            saveInfo[ n ].Proficiency = proficiency;
-            saveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
-            saveInfo[ n ].TurnCount = turnCountAll;
-            saveInfo[ n ].LV = unitBase[ 0 ].LV;
-            saveInfo[ n ].Time = time;
-            saveInfo[ n ].TimeData = timeData;
-        }
-
 
         for ( int i = 0 ; i < GameDefine.MAX_GAMEDATA ; i++ )
         {
@@ -426,84 +507,12 @@ public class GameUserData : Singleton<GameUserData>
             copyBytes( ref bytes , ref b , ref index );
         }
 
-
-        if ( cloud )
-        {
-            GameSLCloudUI.instance.showLoading();
-            GamePHP.instance.phpSave( n + GameDefine.MAX_SAVE , bytes , onCloudSave );
-        }
-        else
-        {
-#if SWORD_CLOUD
-            GameSLUI.instance.showLoading();
-            GamePHP.instance.phpSave( n , bytes , onSaveCloud );
-#else
-            string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
-
-#if UNITY_EDITOR
-            Debug.Log( path );
-#endif
-
-            FileStream fs = new FileStream( path , FileMode.Create );
-
-            fs.Write( bytes , 0 , bytes.Length );
-            fs.Close();
-            fs.Dispose();
-
-            bytes = null;
-#endif
-        }
-
+        return bytes;
     }
 
-
-    public void load( int n , bool cloud )
+    /// <summary>把存档字节应用回当前进度</summary>
+    public void applySaveBytes( byte[] bytes )
     {
-#if ( UNITY_ANDROID ) && !UNITY_EDITOR
-        if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
-        {
-            return;
-        }
-#endif
-
-        byte[] bytes = new byte[ SAVEDAT_SIZE ];
-
-        if ( cloud )
-        {
-            bytes = cloudSaveData[ n ];
-
-            if ( bytes == null )
-            {
-                return;
-            }
-        }
-        else
-        {
-#if SWORD_CLOUD
-            bytes = saveDataCloud[ n ];
-
-            if ( bytes == null )
-            {
-                return;
-            }
-#else
-            string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
-
-            if ( !File.Exists( path ) )
-            {
-                return;
-            }
-
-            FileStream fs = new FileStream( path , FileMode.Open );
-
-            fs.Read( bytes , 0 , SAVEDAT_SIZE );
-            fs.Close();
-            fs.Dispose();
-#endif
-        }
-
-
-
         int index = 0;
 
         stage = getInt( ref bytes , ref index );
@@ -567,16 +576,62 @@ public class GameUserData : Singleton<GameUserData>
             }
         }
 
-
         for ( int i = 0 ; i < GameDefine.MAX_ITEMBAG ; i++ )
         {
             itemBag[ i ] = getShort( ref bytes , ref index );
         }
-
-        GameSceneManager.instance.loadScene( GameSceneType.Camp , GameSceneLoadMode.Load );
     }
 
+    /// <summary>快速存档：写独立文件，不占用、也不读取 5 个存档槽</summary>
+    public bool saveToFile( string path )
+    {
+#if ( UNITY_ANDROID ) && !UNITY_EDITOR
+        if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
+        {
+            return false;
+        }
+#endif
 
+        byte[] bytes = buildSaveBytes();
+
+        FileStream fs = new FileStream( path , FileMode.Create );
+
+        fs.Write( bytes , 0 , bytes.Length );
+        fs.Close();
+        fs.Dispose();
+
+        return true;
+    }
+
+    /// <summary>快速读档：从独立文件读取并切场景</summary>
+    public bool loadFromFile( string path , GameSceneType scene )
+    {
+#if ( UNITY_ANDROID ) && !UNITY_EDITOR
+        if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
+        {
+            return false;
+        }
+#endif
+
+        if ( !File.Exists( path ) )
+        {
+            return false;
+        }
+
+        byte[] bytes = new byte[ SAVEDAT_SIZE ];
+
+        FileStream fs = new FileStream( path , FileMode.Open );
+
+        fs.Read( bytes , 0 , SAVEDAT_SIZE );
+        fs.Close();
+        fs.Dispose();
+
+        applySaveBytes( bytes );
+
+        GameSceneManager.instance.loadScene( scene , GameSceneLoadMode.Load );
+
+        return true;
+    }
 
     public void saveBattle()
     {
@@ -835,7 +890,9 @@ public class GameUserData : Singleton<GameUserData>
 //             bb[ i ] = bytes[ i ];
 //         GamePHP.instance.phpSave( -1 , bb , null );
 #endif
-        string path = GameSetting.PersistentDataPath + "/SaveBattle.dat";
+        string path = BattleSavePathOverride ?? ( GameSetting.PersistentDataPath + "/SaveBattle.dat" );
+
+        BattleSavePathOverride = null;
 
 #if UNITY_EDITOR
         Debug.Log( path );
@@ -1459,7 +1516,9 @@ public class GameUserData : Singleton<GameUserData>
         }
 #endif
 
-        string path = GameSetting.PersistentDataPath + "/SaveBattle.dat";
+        string path = BattleSavePathOverride ?? ( GameSetting.PersistentDataPath + "/SaveBattle.dat" );
+
+        BattleSavePathOverride = null;
 
         if ( !File.Exists( path ) )
         {

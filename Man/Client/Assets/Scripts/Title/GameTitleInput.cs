@@ -223,40 +223,19 @@ public class GameTitleInput : Singleton<GameTitleInput>
 
     void moveHelpUI()
     {
-        bool bMove = false;
-
-        int selection = GameHelpUI.instance.Selection;
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Up ) )
+        if ( GameInputManager.getKeyDown( GameInputCode.Up ) ||
+            GameInputManager.getKeyDown( GameInputCode.Left ) )
         {
-            selection--;
-            bMove = true;
-        }
+            GameHelpUI.instance.move( -1 );
 
-        if ( GameInputManager.getKeyDown( GameInputCode.Down ) )
-        {
-            selection++;
-            bMove = true;
-        }
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Left ) )
-        {
-            selection--;
-            bMove = true;
-        }
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Right ) )
-        {
-            selection++;
-            bMove = true;
-        }
-
-        if ( !bMove )
-        {
             return;
         }
 
-        GameHelpUI.instance.select( selection );
+        if ( GameInputManager.getKeyDown( GameInputCode.Down ) ||
+            GameInputManager.getKeyDown( GameInputCode.Right ) )
+        {
+            GameHelpUI.instance.move( 1 );
+        }
     }
 
 
@@ -428,8 +407,10 @@ public class GameTitleInput : Singleton<GameTitleInput>
             return;
         }
 
+        // 设定面板打开时，主菜单不再响应任何按键（含方向键）
         if ( GameSLUI.instance.IsShow || 
             GameBlackUI.instance.IsShow ||
+            GameHelpUI.instance.IsShow ||
             !GameTitleUI.instance.IsShow )
         {
             return;
@@ -475,7 +456,7 @@ public class GameTitleInput : Singleton<GameTitleInput>
                 case 3:
                     {
                         GameHelpUI.instance.show();
-                        GameHelpUI.instance.select( 0 );
+                        GameHelpUI.instance.selectFirst();
                     }
                     break;
             }
@@ -504,6 +485,7 @@ public class GameTitleInput : Singleton<GameTitleInput>
 
         if ( GameSLUI.instance.IsShow ||
             GameBlackUI.instance.IsShow ||
+            GameHelpUI.instance.IsCapturing ||
             !GameHelpUI.instance.IsShow )
         {
             return;
@@ -517,23 +499,17 @@ public class GameTitleInput : Singleton<GameTitleInput>
 
             switch ( GameHelpUI.instance.Selection )
             {
-                case 0:
-                    GameHelpUI.instance.onClick0();
+                case 12:
+                    GameHelpUI.instance.onVirtualPad();
                     break;
-                case 1:
-                    GameHelpUI.instance.onClick1();
+                case 13:
+                    GameHelpUI.instance.onGamepad();
                     break;
-                case 2:
-                    GameHelpUI.instance.onClick2();
+                case 14:
+                    GameHelpUI.instance.onPadMap();
                     break;
-                case 3:
-                    GameHelpUI.instance.onClick3();
-                    break;
-                case 4:
-                    GameHelpUI.instance.onClick4();
-                    break;
-                case 5:
-                    GameHelpUI.instance.onClick5();
+                case 15:
+                    GameHelpUI.instance.onHaptic();
                     break;
                 case 6:
                     GameHelpUI.instance.onSetting0();
@@ -546,9 +522,6 @@ public class GameTitleInput : Singleton<GameTitleInput>
                     break;
                 case 9:
                     GameHelpUI.instance.onSetting21();
-                    break;
-                case 10:
-                    GameHelpUI.instance.onClick6();
                     break;
                 case 11:
                     GameHelpUI.instance.onClick7();

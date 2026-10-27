@@ -10,7 +10,7 @@ public class GameActiveUI : GameUI< GameActiveUI >
 {
     public void onClick()
     {
-#if UNITY_IPHONE && !UNITY_EDITOR
+#if UNITY_IOS && !UNITY_EDITOR && !IOS_PERSONAL_DEV
 //        GameIOSPayData.instance.IAPBuyGoods( 0 );
 #elif UNITY_ANDROID && !UNITY_EDITOR
         GamePHP.instance.phpActive( onActive );

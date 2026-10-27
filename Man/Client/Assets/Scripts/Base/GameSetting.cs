@@ -53,6 +53,23 @@ public class GameSetting : SingletonNew< GameSetting >
 
     public float touchScale = 1.0f;
 
+    // 虚拟控制器（屏幕按键）开关
+    public bool virtualPad = true;
+
+    // 外接手柄/键盘输入开关
+    public bool gamepad = true;
+
+    // 震动反馈开关
+    public bool haptic = true;
+
+    // 手柄按键映射：-1 表示使用 InputManager 默认映射，>=0 表示 JoystickButtonN
+    public int padConfirm = -1;
+    public int padCancel = -1;
+    public int padUp = -1;
+    public int padDown = -1;
+    public int padLeft = -1;
+    public int padRight = -1;
+
     public GameMode mode = GameMode.Normal;
     public GameLocation location = GameLocation.SimplifiedChinese;
 
@@ -85,6 +102,17 @@ public class GameSetting : SingletonNew< GameSetting >
 	{
         PlayerPrefs.SetFloat( "touchScale" , touchScale );
 
+        PlayerPrefs.SetInt( "virtualPad" , virtualPad ? 1 : 0 );
+        PlayerPrefs.SetInt( "gamepad" , gamepad ? 1 : 0 );
+        PlayerPrefs.SetInt( "haptic" , haptic ? 1 : 0 );
+
+        PlayerPrefs.SetInt( "padConfirm" , padConfirm );
+        PlayerPrefs.SetInt( "padCancel" , padCancel );
+        PlayerPrefs.SetInt( "padUp" , padUp );
+        PlayerPrefs.SetInt( "padDown" , padDown );
+        PlayerPrefs.SetInt( "padLeft" , padLeft );
+        PlayerPrefs.SetInt( "padRight" , padRight );
+
         PlayerPrefs.SetInt( "location" , (int)location );
         PlayerPrefs.SetInt( "mode" , (int)mode );
 
@@ -99,6 +127,19 @@ public class GameSetting : SingletonNew< GameSetting >
 	{
         touchScale = PlayerPrefs.GetFloat( "touchScale" , 1.0f );
 
+        virtualPad = PlayerPrefs.GetInt( "virtualPad" , 1 ) > 0;
+        gamepad = PlayerPrefs.GetInt( "gamepad" , 1 ) > 0;
+        haptic = PlayerPrefs.GetInt( "haptic" , 1 ) > 0;
+
+        GameHapticFeedback.Enabled = haptic;
+
+        padConfirm = PlayerPrefs.GetInt( "padConfirm" , -1 );
+        padCancel = PlayerPrefs.GetInt( "padCancel" , -1 );
+        padUp = PlayerPrefs.GetInt( "padUp" , -1 );
+        padDown = PlayerPrefs.GetInt( "padDown" , -1 );
+        padLeft = PlayerPrefs.GetInt( "padLeft" , -1 );
+        padRight = PlayerPrefs.GetInt( "padRight" , -1 );
+
         location = (GameLocation)PlayerPrefs.GetInt( "location" , 0 );
         mode = (GameMode)PlayerPrefs.GetInt( "mode" , 0 );
 
@@ -108,6 +149,24 @@ public class GameSetting : SingletonNew< GameSetting >
 		if( !PlayerPrefs.HasKey( "quality" ) )
 		{
 			int n = SystemInfo.systemMemorySize;
+#if UNITY_IOS
+            // iOS设备内存通常较大，默认高画质
+            quality = (int)GameSetting.GameQuality.High;
+            // 根据屏幕大小调整默认触摸缩放
+            if (Screen.height <= 1334) // iPhone SE/8 等小屏
+            {
+                touchScale = 1.2f;
+            }
+            else if (Screen.height >= 2796) // iPhone Pro Max 等大屏
+            {
+                touchScale = 0.9f;
+            }
+            else
+            {
+                touchScale = 1.0f;
+            }
+            PlayerPrefs.SetFloat("touchScale", touchScale);
+#else
 			if ( n < 513 )
 			{
 				GameSetting.instance.quality = (int)GameSetting.GameQuality.Low;
@@ -120,15 +179,14 @@ public class GameSetting : SingletonNew< GameSetting >
 			{
 				GameSetting.instance.quality = (int)GameSetting.GameQuality.Middle;
 			}
+#endif
 		}
 		else
 		{
 			quality = PlayerPrefs.GetInt( "quality" );
 		}
 
-#if UNITY_EDITOR
-		Debug.Log( "quality:" + " " + GameSetting.instance.quality );
-#endif
+		Debug.Log( "[GameSetting] quality: " + quality + " (memory: " + SystemInfo.systemMemorySize + "MB)" );
 		//Localization.language = "Chinese";
 	}
 
@@ -162,21 +220,25 @@ public class GameSetting : SingletonNew< GameSetting >
 		{
 #if UNITY_EDITOR
 			StreamingAssetsPath = Application.dataPath + "/StreamingAssets/";
-#elif UNITY_IPHONE
+#elif UNITY_IOS
 			StreamingAssetsPath = Application.dataPath + "/Raw/";
 #elif UNITY_ANDROID
 			StreamingAssetsPath = "jar:file://" + Application.dataPath + "!/assets/";
-#elif UNITY_WEBPLAYER
-			StreamingAssetsPath = Application.dataPath + "/StreamingAssets/";			
 #else
 			StreamingAssetsPath = Application.streamingAssetsPath + "/";
 			//StreamingAssetsPath = Application.dataPath + "/StreamingAssets/";
 #endif
 
-//#if UNITY_EDITOR
-			Debug.Log( "Screen: " + Screen.width + " " + Screen.height );
-			Debug.Log( "memory: setting " + System.GC.GetTotalMemory(true) );
-            //#endif
+			Debug.Log( "[GameSetting] Platform: " + Application.platform );
+			Debug.Log( "[GameSetting] Screen: " + Screen.width + " x " + Screen.height + " (dpi: " + Screen.dpi + ")" );
+			Debug.Log( "[GameSetting] Memory: " + SystemInfo.systemMemorySize + "MB" );
+			Debug.Log( "[GameSetting] StreamingAssetsPath: " + StreamingAssetsPath );
+			Debug.Log( "[GameSetting] PersistentDataPath: " + Application.persistentDataPath );
+			Debug.Log( "[GameSetting] DataPath: " + Application.dataPath );
+#if UNITY_IOS
+			Debug.Log( "[GameSetting] iOS model: " + SystemInfo.deviceModel );
+			Debug.Log( "[GameSetting] iOS OS: " + SystemInfo.operatingSystem );
+#endif
 
             GameMath.init();
 
@@ -227,7 +289,7 @@ public class GameSetting : SingletonNew< GameSetting >
 
 //			IsWWW = true;
 
-			#if UNITY_WEBPLAYER || UNITY_WEBGL
+			#if UNITY_WEBGL
 			AddonPath = StreamingAssetsPath;
 			#else
 			AddonPath = PersistentDataPath;
@@ -256,11 +318,7 @@ public class GameSetting : SingletonNew< GameSetting >
 		{
 //			try
 //			{
-				#if UNITY_WEBPLAYER
-				FileStream stream = File.Open( path , FileMode.Open );
-				#else
 				FileStream stream = File.Open( path , FileMode.Open , FileAccess.Read );
-				#endif
 
 				if ( stream == null )
 				{
@@ -288,7 +346,7 @@ public class GameSetting : SingletonNew< GameSetting >
 	{
 		try
 		{
-			#if UNITY_WEBPLAYER || UNITY_WEBGL
+			#if UNITY_WEBGL
 
 			if ( GameManager.instance) 
 			{
@@ -344,25 +402,18 @@ public class GameSetting : SingletonNew< GameSetting >
 			Application.platform == RuntimePlatform.IPhonePlayer )
 			url = "file://" + url;
 
-        UnityWebRequest www = new UnityWebRequest( url );
-		yield return www;
+        UnityWebRequest www = UnityWebRequest.Get( url );
+		yield return www.SendWebRequest();
 
-		if ( www.isDone )
+		if ( www.result != UnityWebRequest.Result.Success )
 		{
-			if ( www.error != null ) 
-			{
-				Debug.LogWarning( url + " load error." );
-			}
-			else
-			{
-				cb( www.downloadHandler.data , false );
-				www.Dispose();
-			}
+			Debug.LogWarning( url + " load error: " + www.error );
+			cb( null , true );
 		}
 		else
 		{
-			//cb( null , true );
-			Debug.LogWarning( url + " load error." );
+			cb( www.downloadHandler.data , false );
+			www.Dispose();
 		}
 	}
 	
@@ -390,24 +441,17 @@ public class GameSetting : SingletonNew< GameSetting >
         //			Application.platform == RuntimePlatform.IPhonePlayer )
         //			url = "file://" + url;
 
-        UnityWebRequest www = new UnityWebRequest( url );
-		yield return www;
+        UnityWebRequest www = UnityWebRequest.Get( url );
+		yield return www.SendWebRequest();
 		
-		if ( www.isDone )
+		if ( www.result != UnityWebRequest.Result.Success )
 		{
-			if ( www.error != null ) 
-			{
-	
-			}
-			else
-			{
-				cb( www , i , false );
-				www.Dispose();
-			}
+			cb( null , i , true );
 		}
 		else
 		{
-			cb( null , i , true );
+			cb( www , i , false );
+			www.Dispose();
 		}
 	}
 

@@ -71,3 +71,27 @@ Unity版本为2018.3.0f2以上，运行TitleScene即可。非内部测试人员�
 
 ---------------------------------------------------------------------------
 
+## iOS 真机版（本仓库维护分支）
+
+**素材不入库**：`Man/Client/Assets/Resources/Texture`、`Music`、`Sound`、`Movie`、`Prefab` 与 `Assets/Objects`（SAF）都是 APK 导出产物，由单独的资源包提供；克隆仓库后需先放置资源包，或用 `Sword.apk` 重新导出。
+
+```bash
+# 一键：Unity 导出 → xcodebuild → 安装到真机 → 启动
+bash tools/build_ios.sh
+
+# 只导出素材（需要 Sword.apk）
+python3 tools/export_assets.py
+
+# 只导出浏览用副本（贴图/精灵/音频/视频 + 索引页）
+python3 tools/dump_apk_assets.py
+```
+
+可用环境变量：`TDJ_IOS_OUT`、`TDJ_UNITY`、`TDJ_DEVICE`、`TDJ_BUNDLE_ID`，默认值见脚本头部。
+
+相关文档：
+
+- [资源映射配置说明](./docs/资源映射配置说明.md)：APK 资源结构、导出规则、重名与 Sprite 切片 ID 等坑
+- [Unity 升级兼容性修复报告](./docs/Unity升级兼容性修复报告.md)：升级与真机运行期的修复记录
+- [Unity 升级过时 API 扫描报告](./docs/UnityUpgradeScanReport.md)：升级前的 API 扫描快照
+
+

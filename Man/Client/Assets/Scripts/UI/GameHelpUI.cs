@@ -8,14 +8,40 @@ using UnityEngine.UI;
 
 public class GameHelpUI : GameUI<GameHelpUI>
 {
-    Text[] text = new Text[ 12 ];
+    Text[] text = new Text[ 16 ];
     int selection = 0;
-    Color color;
     public int Selection { get { return selection; } }
+
+    // 外链（0-4）、QQ 群（5）、5星好评（10）选项已移除
+    const int RemovedEntryCount = 6;
+
+    // 新增项：虚拟控制器、外接手柄、手柄按键设置、震动反馈
+    const int EntryVirtualPad = 12;
+    const int EntryGamepad = 13;
+    const int EntryPadMap = 14;
+    const int EntryHaptic = 15;
+
+    // 面板自上而下的选择顺序
+    static readonly int[] order = { EntryVirtualPad, EntryGamepad, EntryPadMap, EntryHaptic, 6, 7, 8, 9, 11 };
 
     Text setting00;
     Text setting10;
     Text setting2;
+
+    Text virtualPadValue;
+    Text gamepadValue;
+    Text padMapValue;
+    Text hapticValue;
+    Text hint;
+
+    // 手柄按键录制：0 空闲 / 1 确认 / 2 取消 / 3 上 / 4 下 / 5 左 / 6 右
+    int captureStep = 0;
+    float captureTime = 0.0f;
+
+    // 临时提示的剩余显示时间
+    float messageTime = 0.0f;
+
+    public bool IsCapturing { get { return captureStep != 0; } }
 
     public override void initSingleton()
     {
@@ -29,46 +55,130 @@ public class GameHelpUI : GameUI<GameHelpUI>
         text[ 6 ] = transform.Find( "setting0/text" ).GetComponent<Text>();
         text[ 7 ] = transform.Find( "setting1/text" ).GetComponent<Text>();
 
-        text[ 6 ] = transform.Find( "setting0/text" ).GetComponent<Text>();
-        text[ 7 ] = transform.Find( "setting1/text" ).GetComponent<Text>();
-
         text[ 8 ] = transform.Find( "setting20" ).GetComponent<Text>();
         text[ 9 ] = transform.Find( "setting21" ).GetComponent<Text>();
 
-        text[ 10 ] = transform.Find( "button6/text" ).GetComponent<Text>();
         text[ 11 ] = transform.Find( "button7/text" ).GetComponent<Text>();
-
-        if ( PlayerPrefs.GetInt( "review" , 0 ) > 0 )
-            text[ 10 ].text = GameStringData.instance.getString( GameStringType.Help10 );
-        else
-            text[ 10 ].text = GameStringData.instance.getString( GameStringType.Help00 );
 
         setting00 = transform.Find( "setting00" ).GetComponent<Text>();
         setting10 = transform.Find( "setting10" ).GetComponent<Text>();
 
         setting2 = transform.Find( "setting2/text" ).GetComponent<Text>();
 
-        color = text[ 0 ].color;
+        for ( int i = 0 ; i < RemovedEntryCount ; i++ )
+        {
+            Transform button = transform.Find( "button" + i );
+
+            if ( button != null )
+            {
+                button.gameObject.SetActive( false );
+            }
+        }
+
+        hideButton( "button6" );
+
+        text[ EntryVirtualPad ] = createRow( "虚拟控制器" , 50.0f , out virtualPadValue );
+        text[ EntryGamepad ] = createRow( "外接手柄" , 36.0f , out gamepadValue );
+        text[ EntryPadMap ] = createRow( "手柄按键" , 22.0f , out padMapValue );
+        text[ EntryHaptic ] = createRow( "震动反馈" , 8.0f , out hapticValue );
+
+        hint = createText( "Hint" , new Vector2( 0.0f , -65.0f ) , new Vector2( 132.0f , 20.0f ) );
+
+        hint.transform.localScale = Vector3.one;
+        hint.fontSize = 8;
+        hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+        hint.verticalOverflow = VerticalWrapMode.Overflow;
+        hint.alignment = TextAnchor.MiddleCenter;
+
+        // 平时不显示文字提示，只在录制手柄按键时显示操作指引
+        hint.gameObject.SetActive( false );
+
+        layoutRows();
+    }
+
+    void hideButton( string name )
+    {
+        Transform button = transform.Find( name );
+
+        if ( button != null )
+        {
+            button.gameObject.SetActive( false );
+        }
+    }
+
+    // 重新排布各行的纵向位置，使去掉项后的内容在面板中居中
+    void layoutRows()
+    {
+        setRowY( text[ 6 ].transform.parent , setting00.transform , -6.0f );
+        setRowY( text[ 7 ].transform.parent , setting10.transform , -21.0f );
+
+        setRowY( text[ 8 ].transform , null , -36.0f );
+        setRowY( text[ 9 ].transform , null , -36.0f );
+        setRowY( setting2.transform.parent , null , -36.0f );
+
+        setRowY( text[ 11 ].transform.parent , null , -51.0f );
+    }
+
+    void setRowY( Transform row , Transform value , float y )
+    {
+        setY( row , y );
+
+        if ( value != null )
+        {
+            setY( value , y );
+        }
+    }
+
+    void setY( Transform trans , float y )
+    {
+        RectTransform rect = trans as RectTransform;
+
+        if ( rect == null )
+        {
+            return;
+        }
+
+        Vector2 pos = rect.anchoredPosition;
+
+        pos.y = y;
+
+        rect.anchoredPosition = pos;
     }
 
     public override void onShow()
     {
+        messageTime = 0.0f;
+
         updateSettingText();
+        updateToggleText();
+        updateHint();
     }
 
-    public void select( int i )
+    public void selectFirst()
     {
-        if ( i < 0 )
+        selection = order[ 0 ];
+
+        updateText();
+    }
+
+    // dir: -1 上移 / +1 下移，按面板显示顺序循环
+    public void move( int dir )
+    {
+        if ( captureStep != 0 )
         {
-            i = 11;
+            return;
         }
 
-        if ( i > 11 )
+        int index = Array.IndexOf( order , selection );
+
+        if ( index < 0 )
         {
-            i = 0;
+            index = 0;
         }
 
-        selection = i;
+        index = ( index + dir + order.Length ) % order.Length;
+
+        selection = order[ index ];
 
         updateText();
     }
@@ -143,6 +253,159 @@ public class GameHelpUI : GameUI<GameHelpUI>
         GameSetting.instance.save();
     }
 
+    public void onVirtualPad()
+    {
+        GameSetting setting = GameSetting.instance;
+
+        // 没有外接手柄时不允许关闭，否则屏幕上将没有任何可操作输入
+        if ( setting.virtualPad && Input.GetJoystickNames().Length == 0 )
+        {
+            showMessage( "未检测到外接手柄，保留虚拟控制器" );
+
+            return;
+        }
+
+        setting.virtualPad = !setting.virtualPad;
+
+        setting.save();
+
+        GameTouchCenterUI.instance.applySetting();
+
+        updateToggleText();
+        updateHint();
+    }
+
+    public void onGamepad()
+    {
+        GameSetting.instance.gamepad = !GameSetting.instance.gamepad;
+
+        GameSetting.instance.save();
+
+        updateToggleText();
+        updateHint();
+    }
+
+    public void onHaptic()
+    {
+        GameSetting setting = GameSetting.instance;
+
+        setting.haptic = !setting.haptic;
+
+        GameHapticFeedback.Enabled = setting.haptic;
+
+        setting.save();
+
+        if ( setting.haptic )
+        {
+            GameHapticFeedback.Play( GameHapticFeedback.HapticType.Light );
+        }
+
+        updateToggleText();
+        updateHint();
+    }
+
+    public void onPadMap()
+    {
+        captureStep = 1;
+        captureTime = 0.0f;
+
+        hint.gameObject.SetActive( true );
+        hint.text = "请按【确认】键…（8秒）";
+    }
+
+    protected override void onUpdate()
+    {
+        if ( captureStep == 0 )
+        {
+            tickMessage();
+
+            return;
+        }
+
+        captureTime += Time.deltaTime;
+
+        if ( captureTime > 8.0f )
+        {
+            finishCapture( false );
+
+            return;
+        }
+
+        // 忽略刚进入录制瞬间按下的键（就是用来进入"手柄按键"项的确认键）
+        if ( captureTime < 0.35f )
+        {
+            return;
+        }
+
+        if ( !Input.anyKeyDown )
+        {
+            return;
+        }
+
+        for ( int i = 0 ; i < 20 ; i++ )
+        {
+            if ( Input.GetKeyDown( KeyCode.JoystickButton0 + i ) )
+            {
+                recordPadButton( i );
+
+                return;
+            }
+        }
+    }
+
+    void recordPadButton( int index )
+    {
+        GameSetting setting = GameSetting.instance;
+
+        switch ( captureStep )
+        {
+            case 1:
+                setting.padConfirm = index;
+                captureStep = 2;
+                hint.text = "请按【取消】键…（8秒）";
+                break;
+            case 2:
+                setting.padCancel = index;
+                captureStep = 3;
+                hint.text = "请按【上】键…（8秒）";
+                break;
+            case 3:
+                setting.padUp = index;
+                captureStep = 4;
+                hint.text = "请按【下】键…（8秒）";
+                break;
+            case 4:
+                setting.padDown = index;
+                captureStep = 5;
+                hint.text = "请按【左】键…（8秒）";
+                break;
+            case 5:
+                setting.padLeft = index;
+                captureStep = 6;
+                hint.text = "请按【右】键…（8秒）";
+                break;
+            case 6:
+                setting.padRight = index;
+                finishCapture( true );
+                break;
+        }
+
+        captureTime = 0.0f;
+    }
+
+    void finishCapture( bool save )
+    {
+        captureStep = 0;
+        captureTime = 0.0f;
+
+        if ( save )
+        {
+            GameSetting.instance.save();
+        }
+
+        updateToggleText();
+        updateHint();
+    }
 
     public void updateSettingText()
     {
@@ -165,100 +428,159 @@ public class GameHelpUI : GameUI<GameHelpUI>
         }
     }
 
-    public void updateText()
+    void updateToggleText()
     {
-        for ( int i = 0 ; i < 12 ; i++ )
-        {
-            Color c = color;
+        GameSetting setting = GameSetting.instance;
 
-            if ( selection == i )
-            {
-                c.a = 1.0f;
-                text[ i ].color = c;
-            }
-            else
-            {
-                c.a = 0.3f;
-                text[ i ].color = c;
-
-                setting00.color = c;
-                setting10.color = c;
-
-                setting2.color = c;
-            }
-        }
-
-        if ( selection == 6 )
-            setting00.color = text[ selection ].color;
-
-        if ( selection == 7 )
-            setting10.color = text[ selection ].color;
-
-        if ( selection == 8 || selection == 9 )
-            setting2.color = text[ selection ].color;
+        virtualPadValue.text = setting.virtualPad ? "开" : "关";
+        gamepadValue.text = setting.gamepad ? "开" : "关";
+        hapticValue.text = setting.haptic ? "开" : "关";
+        padMapValue.text = ( setting.padConfirm >= 0 && setting.padCancel >= 0 &&
+            setting.padUp >= 0 && setting.padDown >= 0 &&
+            setting.padLeft >= 0 && setting.padRight >= 0 ) ? "已设置" : "默认";
     }
 
-    void Start()
+    // 短暂显示一条提示（平时提示行是隐藏的）
+    void showMessage( string str )
     {
-    }
-
-    public void onClick0()
-    {
-        Application.OpenURL( "https://dynasty.xin/index.php?c=show&id=132" );       
-    }
-
-    public void onClick1()
-    {
-        Application.OpenURL( "https://dynasty.xin/index.php?c=show&id=127" );
-    }
-
-    public void onClick2()
-    {
-        Application.OpenURL( "https://dynasty.xin/index.php?c=show&id=129" );
-    }
-
-    public void onClick3()
-    {
-        Application.OpenURL( "https://dynasty.xin/index.php?c=show&id=131" );
-    }
-
-    public void onClick4()
-    {
-        Application.OpenURL( "https://dynasty.xin/index.php?c=show&id=130" );
-    }
-
-
-    public void onClick5()
-    {
-#if UNITY_IPHONE && !UNITY_EDITOR
-        GameManager.joinGroup1();
-#elif UNITY_ANDROID && !UNITY_EDITOR
-        AndroidJavaClass jc = new AndroidJavaClass( "com.unity3d.player.UnityPlayer" );
-
-        AndroidJavaObject jo = jc.GetStatic<AndroidJavaObject>( "currentActivity" );
-
-        jo.Call( "joinQQGroup1" , "pwMD-7s71mgVc-4rMpogwzhcw6vB3_Mv" );
-#else
-        Application.OpenURL( "https://shang.qq.com/wpa/qunwpa?idkey=471f2c42f065e9be59b82e2d7883c2b55e3caaf6b55414cf89e486a4c5c735c5" );
-#endif
-    }
-
-    public void onClick6()
-    {
-        if ( PlayerPrefs.GetInt( "review" , 0 ) > 0 )
+        if ( hint == null )
         {
             return;
         }
 
-        PlayerPrefs.SetInt( "review" , 2 );
+        hint.text = str;
+        hint.gameObject.SetActive( true );
 
-#if UNITY_IPHONE
-        const string APP_ID = "1461510167";
-        var url = string.Format(
-            "itms-apps://itunes.apple.com/cn/app/id{0}?mt=8&action=write-review" ,
-            APP_ID );
-        Application.OpenURL( url );
-#endif
+        messageTime = 2.0f;
+    }
+
+    void tickMessage()
+    {
+        if ( messageTime <= 0.0f )
+        {
+            return;
+        }
+
+        messageTime -= Time.deltaTime;
+
+        if ( messageTime <= 0.0f )
+        {
+            updateHint();
+        }
+    }
+
+    // 平时隐藏提示行，只在录制手柄按键时显示
+    void updateHint()
+    {
+        if ( hint == null )
+        {
+            return;
+        }
+
+        if ( captureStep != 0 )
+        {
+            return;
+        }
+
+        hint.text = "";
+        hint.gameObject.SetActive( false );
+    }
+
+    // 未选中：深褐色文字 + 浅色描边；选中：亮白文字 + 深色描边（字号与第一版保持一致，不再放大）
+    void styleText( Text t , bool selected )
+    {
+        if ( t == null )
+        {
+            return;
+        }
+
+        if ( selected )
+        {
+            t.color = new Color( 1.0f , 0.98f , 0.85f , 1.0f );
+        }
+        else
+        {
+            t.color = new Color( 0.20f , 0.10f , 0.02f , 0.95f );
+        }
+
+        Outline outline = t.GetComponent<Outline>();
+
+        if ( outline != null )
+        {
+            if ( selected )
+            {
+                outline.effectColor = new Color( 0.32f , 0.10f , 0.0f , 1.0f );
+            }
+            else
+            {
+                outline.effectColor = new Color( 1.0f , 0.95f , 0.75f , 0.6f );
+            }
+
+            outline.effectDistance = new Vector2( 1.0f , -1.0f );
+        }
+    }
+
+    public void updateText()
+    {
+        for ( int i = 0 ; i < order.Length ; i++ )
+        {
+            styleText( text[ order[ i ] ] , selection == order[ i ] );
+        }
+
+        styleText( virtualPadValue , selection == EntryVirtualPad );
+        styleText( gamepadValue , selection == EntryGamepad );
+        styleText( hapticValue , selection == EntryHaptic );
+        styleText( padMapValue , selection == EntryPadMap );
+
+        styleText( setting00 , selection == 6 );
+        styleText( setting10 , selection == 7 );
+        styleText( setting2 , selection == 8 || selection == 9 );
+
+        updateHint();
+    }
+
+    // 新建一行“标签 + 值（开/关）”
+    Text createRow( string label , float y , out Text value )
+    {
+        Text labelText = createText( label , new Vector2( -31.7f , y ) , new Vector2( 64.0f , 20.0f ) );
+
+        labelText.text = label;
+
+        value = createText( label + "Value" , new Vector2( 26.0f , y ) , new Vector2( 88.0f , 30.0f ) );
+
+        return labelText;
+    }
+
+    Text createText( string name , Vector2 pos , Vector2 size )
+    {
+        GameObject obj = new GameObject( name , typeof( RectTransform ) );
+
+        RectTransform trans = obj.GetComponent<RectTransform>();
+
+        trans.SetParent( transform , false );
+        trans.anchorMin = new Vector2( 0.5f , 0.5f );
+        trans.anchorMax = new Vector2( 0.5f , 0.5f );
+        trans.pivot = new Vector2( 0.5f , 0.5f );
+        trans.anchoredPosition = pos;
+        trans.sizeDelta = size;
+        trans.localScale = text[ 6 ].transform.localScale;
+
+        Text t = obj.AddComponent<Text>();
+
+        t.font = text[ 6 ].font;
+        t.fontSize = text[ 6 ].fontSize;
+        t.fontStyle = FontStyle.Normal;
+        t.alignment = TextAnchor.MiddleCenter;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+        t.raycastTarget = false;
+        t.text = "";
+
+        Outline outline = obj.AddComponent<Outline>();
+
+        outline.effectDistance = new Vector2( 1.2f , -1.2f );
+
+        return t;
     }
 
     public void onClick7()

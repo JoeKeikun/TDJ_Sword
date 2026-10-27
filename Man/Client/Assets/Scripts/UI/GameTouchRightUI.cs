@@ -16,6 +16,9 @@ public class GameTouchRightUI : GameUI<GameTouchRightUI>
         transform.Find( "ButtonC" ).gameObject.SetActive( b );
         transform.Find( "ButtonD" ).gameObject.SetActive( b );
 
+        // 快速存/读档按钮跟着虚拟按钮一起出现
+        GameQuickSaveUI.attach( transform );
+
         show();
         showFade();
 

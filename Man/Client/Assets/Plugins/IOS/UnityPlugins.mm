@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 extern "C" bool joinGroup1()
 {
@@ -6,7 +7,19 @@ extern "C" bool joinGroup1()
     NSURL* url = [ NSURL URLWithString: urlStr ];
     if ([[ UIApplication sharedApplication ] canOpenURL: url])
     {
-        [[UIApplication sharedApplication] openURL:url];
+        // Use modern API (iOS 10+) with fallback
+        if ([[UIApplication sharedApplication] respondsToSelector:@selector(openURL:options:completionHandler:)])
+        {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+        }
+        else
+        {
+            // Fallback for older iOS versions
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            [[UIApplication sharedApplication] openURL:url];
+#pragma clang diagnostic pop
+        }
         return true;
     }
     else
@@ -80,4 +93,3 @@ extern "C" int getMsg2()
     
     return hash;
 }
-

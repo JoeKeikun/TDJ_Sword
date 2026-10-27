@@ -30,11 +30,54 @@ public class GameInputManager : MonoBehaviour
 {
     static bool[] lastInputAxisState = new bool[ (int)GameInputCode.Count ];
 
+    // 返回该输入对应的自定义手柄按键索引，-1 表示沿用默认映射
+    static int getPadButton( GameSetting setting , GameInputCode c )
+    {
+        switch ( c )
+        {
+            case GameInputCode.Up:
+                return setting.padUp;
+            case GameInputCode.Down:
+                return setting.padDown;
+            case GameInputCode.Left:
+                return setting.padLeft;
+            case GameInputCode.Right:
+                return setting.padRight;
+            case GameInputCode.Confirm:
+                return setting.padConfirm;
+            case GameInputCode.Cancel:
+                return setting.padCancel;
+        }
+
+        return -1;
+    }
+
     public static bool getKey( GameInputCode c )
     {
-        if ( GameTouchManager.instance.IsShow )
+        // 虚拟控制器与物理手柄/键盘同时生效
+        GameTouchManager touch = GameTouchManager.instance;
+
+        if ( touch != null && touch.IsShow && touch.getKey( c ) )
         {
-            return GameTouchManager.instance.getKey( c );
+            return true;
+        }
+
+        GameSetting setting = GameSetting.instance;
+
+        if ( setting != null && !setting.gamepad )
+        {
+            return false;
+        }
+
+        // 自定义手柄按键映射（在设定帮助里录制）
+        if ( setting != null )
+        {
+            int pad = getPadButton( setting , c );
+
+            if ( pad >= 0 && Input.GetKey( KeyCode.JoystickButton0 + pad ) )
+            {
+                return true;
+            }
         }
 
         switch ( c )
@@ -82,9 +125,30 @@ public class GameInputManager : MonoBehaviour
 
     public static bool getKeyDown( GameInputCode c )
     {
-        if ( GameTouchManager.instance.IsShow )
+        // 虚拟控制器与物理手柄/键盘同时生效
+        GameTouchManager touch = GameTouchManager.instance;
+
+        if ( touch != null && touch.IsShow && touch.getKeyDown( c ) )
         {
-            return GameTouchManager.instance.getKeyDown( c );
+            return true;
+        }
+
+        GameSetting setting = GameSetting.instance;
+
+        if ( setting != null && !setting.gamepad )
+        {
+            return false;
+        }
+
+        // 自定义手柄按键映射（在设定帮助里录制）
+        if ( setting != null )
+        {
+            int pad = getPadButton( setting , c );
+
+            if ( pad >= 0 && Input.GetKeyDown( KeyCode.JoystickButton0 + pad ) )
+            {
+                return true;
+            }
         }
 
         switch ( c )

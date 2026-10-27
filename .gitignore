@@ -11,3 +11,15 @@ Man/Client/Assets/Resources/Sound/
 Man/Client/Assets/Resources/Movie/
 Man/Client/Assets/Resources/Prefab/
 Man/Client/Assets/Resources/Texture/
+.DS_Store
+
+
+# Unity 自动生成目录
+Man/Client/Library/
+Man/Client/Logs/
+Man/Client/Temp/
+Man/Client/obj/
+Man/Client/UserSettings/
+
+# 原始素材与构建输入（体积大，不入库）
+/*.apk

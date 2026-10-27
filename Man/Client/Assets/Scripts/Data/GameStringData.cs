@@ -149,11 +149,11 @@ public class GameStringData : Singleton<GameStringData>
     {
         data = new List<GameString>();
 
-        addString( "初章初始" );
+        addString( "新章初始" );
         addString( "前历再续" );
         addString( "战阵重现" );
 //        addString( "回返太虚" );
-        addString( "设定帮助" );
+        addString( "游戏设定" );
 
         addString( "武器店" );
         addString( "饰品店" );

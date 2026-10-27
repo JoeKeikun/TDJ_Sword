@@ -54,6 +54,10 @@ public class GameItemUI : GameUI<GameItemUI>
 
         moneyText = transform.Find( "money" ).GetComponent<Text>();
         itemText = transform.Find( "item" ).GetComponent<Text>();
+
+        // 行囊双栏面板底图：左 bag0 -> Item_win_t10，右 bag1 -> Item_win_t11
+        GameItemBagUI.applyPanelSprite( bagUI0 , "Texture/Misc/Item_win_t10" );
+        GameItemBagUI.applyPanelSprite( bagUI1 , "Texture/Misc/Item_win_t11" );
     }
 
     void clear()
@@ -710,6 +714,12 @@ public class GameItemUI : GameUI<GameItemUI>
         bagUI0.select( 0 );
 
         updateText();
+
+        // 之前关闭时残留的淡出状态会把整块 UI 的 alpha 停在中间值，
+        // 面板看起来就是半透明/发白，这里重新跑一次淡入
+        showFade();
+
+        StartCoroutine( UIDiag.dump( transform , "item" ) );
     }
 
 

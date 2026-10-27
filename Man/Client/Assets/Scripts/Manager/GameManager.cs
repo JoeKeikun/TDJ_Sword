@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 public class GameManager : SingletonManager< GameManager >
 {
-#if UNITY_IPHONE && !UNITY_EDITOR
+#if UNITY_IOS && !UNITY_EDITOR && !IOS_PERSONAL_DEV
     [DllImport("__Internal")]
     internal extern static int joinGroup1();
     [DllImport("__Internal")]
@@ -88,7 +88,7 @@ public class GameManager : SingletonManager< GameManager >
 
     public void check()
     {
-#if UNITY_IPHONE && !UNITY_EDITOR
+#if UNITY_IOS && !UNITY_EDITOR && !IOS_PERSONAL_DEV
         
         try
         {
@@ -108,6 +108,8 @@ public class GameManager : SingletonManager< GameManager >
 
     void Start()
     {
+        Diag.write( "[BOOT] start diag v2 path=" + Application.persistentDataPath );
+
         Application.targetFrameRate = 60;
 
         GameSetting.instance.init();
@@ -124,8 +126,14 @@ public class GameManager : SingletonManager< GameManager >
 
 
 
-#if UNITY_IPHONE && !UNITY_EDITOR
+#if UNITY_IOS && !UNITY_EDITOR && !IOS_PERSONAL_DEV
 //        GameIOSPayData.instance.init();
+#endif
+
+#if UNITY_IOS && IOS_PERSONAL_DEV
+        // 个人开发模式：默认设置为已激活，跳过iOS支付验证
+        PlayerPrefs.SetInt("Active", 1);
+        PlayerPrefs.Save();
 #endif
 
         //       GameBattleData.instance.saveText();

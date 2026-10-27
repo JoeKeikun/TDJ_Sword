@@ -1,6 +1,11 @@
 //
 //  InAppPurchaseManager.mm
 //
+//  Updated for modern StoreKit (iOS 7+)
+//  - Replaced deprecated transactionReceipt with appStoreReceiptURL
+//  - Removed __OSX_AVAILABLE_STARTING (deprecated macro)
+//  - Added null safety checks
+//
 
 #import "InAppPurchaseManager.h"
 
@@ -109,8 +114,7 @@ static PaymentIOS* paymentIOS;
 }
 
 
-
-- (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response __OSX_AVAILABLE_STARTING(__MAC_NA,__IPHONE_3_0)
+- (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
     products = [ [ NSMutableArray alloc ] initWithArray:response.products ];
     productsDic = [ [ NSMutableDictionary alloc ] init ];
@@ -136,10 +140,22 @@ static PaymentIOS* paymentIOS;
 
 - (void) completeTransaction:(SKPaymentTransaction *) transaction
 {
-    NSString *jsonObjectString = [self encodeBase64:(uint8_t *)transaction.transactionReceipt.bytes
-                                             length:transaction.transactionReceipt.length];
+    // Use appStoreReceiptURL instead of deprecated transactionReceipt
+    NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
+    NSData *receiptData = [NSData dataWithContentsOfURL:receiptURL];
     
-    UnitySendMessage( "GameIOSPayData" , "IAPComplete" , [ jsonObjectString UTF8String ] );
+    if (receiptData != nil && receiptData.length > 0)
+    {
+        NSString *jsonObjectString = [self encodeBase64:(uint8_t *)receiptData.bytes
+                                                 length:receiptData.length];
+        
+        UnitySendMessage( "GameIOSPayData" , "IAPComplete" , [ jsonObjectString UTF8String ] );
+    }
+    else
+    {
+        // Fallback: if receipt is unavailable (e.g., not refreshed), send empty
+        UnitySendMessage( "GameIOSPayData" , "IAPComplete" , "" );
+    }
     
     lastTrans = transaction;
     
@@ -293,5 +309,3 @@ extern "C"
     
     
 }
-
-

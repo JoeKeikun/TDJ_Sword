@@ -48,6 +48,7 @@ public class GameRPGManager : Singleton<GameRPGManager>
 
     public int PosX { get { return movement.PosX; } }
     public int PosY { get { return movement.PosY; } }
+    public int Direction { get { return gameAnimation == null ? 0 : (int)gameAnimation.animationDirection; } }
 
     Dictionary<string , GameAnimation> animations = new Dictionary<string , GameAnimation>();
 
@@ -143,6 +144,21 @@ public class GameRPGManager : Singleton<GameRPGManager>
         movement = obj.AddComponent<GameRPGMovement>();
         movement.setPos( info.PosX , info.PosY );
         movement.setDirection( (GameAnimationDirection)info.Direction );
+
+        GameRPGSceneMovement.instance.followPos( movement.PosBattleX , movement.PosBattleY );
+    }
+
+    // 快速读档：直接落回存档时的格子与朝向
+    public void restorePos( int x , int y , int direction )
+    {
+        if ( movement == null )
+        {
+            return;
+        }
+
+        movement.stopMove();
+        movement.setPos( x , y );
+        movement.setDirection( (GameAnimationDirection)direction );
 
         GameRPGSceneMovement.instance.followPos( movement.PosBattleX , movement.PosBattleY );
     }
@@ -336,12 +352,21 @@ public class GameRPGManager : Singleton<GameRPGManager>
     {
         string path = GameDefine.getString2( activeID );
 
+        Debug.Log( "[RPGBG] showLayer id=" + id + " activeID=" + activeID
+            + " stage=" + ( activeRPGStage == null ? "null" : "ok" )
+            + " L0=" + ( activeRPGStage == null || activeRPGStage.Layer == null ? -1 : activeRPGStage.Layer.L0.Length )
+            + " L1=" + ( activeRPGStage == null || activeRPGStage.Layer == null ? -1 : activeRPGStage.Layer.L1.Length ) );
+
         if ( objsLayer0 == null ||
             objsLayer0.Length != activeRPGStage.Layer.L0.Length )
             objsLayer0 = new GameObject[ activeRPGStage.Layer.L0.Length ];
 
         for ( int j = 0 ; j < activeRPGStage.Layer.L0.Length ; j++ )
         {
+            Debug.Log( "[RPGBG] L0[" + j + "] ID=" + activeRPGStage.Layer.L0[ j ].ID
+                + " Name=" + activeRPGStage.Layer.L0[ j ].Name
+                + " cached=" + ( objsLayer0[ j ] != null ) );
+
             if ( activeRPGStage.Layer.L0[ j ].ID == id )
             {
                 if ( objsLayer0[ j ] != null )
@@ -361,6 +386,12 @@ public class GameRPGManager : Singleton<GameRPGManager>
                     string pathTexture = pathDir + activeRPGStage.Layer.L0[ j ].Name.Replace( ".saf" , "" );
 
                     GameObject imgObject = Resources.Load<GameObject>( pathTexture );
+
+                    if ( imgObject == null )
+                    {
+                        Debug.LogError( "[RPGBG] prefab missing " + pathTexture );
+                    }
+
                     GameObject obj = Instantiate( imgObject , transBackground );
                     obj.name = activeRPGStage.Layer.L0[ j ].Name;
 
@@ -378,7 +409,7 @@ public class GameRPGManager : Singleton<GameRPGManager>
                 }
                 else
                 {
-                    string pathDir = "Texture/RPG/";
+                    string pathDir = "Texture/Rpg/";
                     string pathTexture = pathDir + activeRPGStage.Layer.L0[ j ].Name;
 
                     GameObject imgObject = Resources.Load<GameObject>( "Prefab/Sprite" );
@@ -401,6 +432,65 @@ public class GameRPGManager : Singleton<GameRPGManager>
 
                     SpriteRenderer sprite = obj.GetComponent<SpriteRenderer>();
                     sprite.sprite = Resources.Load<Sprite>( pathTexture );
+
+                    if ( sprite.sprite == null )
+                    {
+                        // 优先使用 APK 未裁切原图：Texture/MapRaw/<Name>
+                        // 裁切版存在同名对象互相覆盖的问题，尺寸/内容与原版不一致
+                        sprite.sprite = Resources.Load<Sprite>( "Texture/MapRaw/" + activeRPGStage.Layer.L0[ j ].Name );
+                    }
+
+                    if ( sprite.sprite == null )
+                    {
+                        // 数据里部分章节的地图名有误（第二章写成 map00），不能只靠 Name。
+                        // 城镇地图编号与当前关卡一致：activeID -> Texture/Map/StageNN/mapNN
+                        string town = activeID.ToString( "D2" );
+                        sprite.sprite = Resources.Load<Sprite>( "Texture/Map/Stage" + town + "/map" + town );
+                    }
+
+                    if ( sprite.sprite == null )
+                    {
+                        // 再按名字里的编号回退：Map00 / map00-1 -> Texture/Map/Stage00/map00
+                        // 取名字里第一段数字的前两位，避免 map00-1 被拼成 Stage001
+                        string digits = "";
+
+                        for ( int k = 0 ; k < activeRPGStage.Layer.L0[ j ].Name.Length ; k++ )
+                        {
+                            char c = activeRPGStage.Layer.L0[ j ].Name[ k ];
+
+                            if ( c >= '0' && c <= '9' )
+                            {
+                                digits += c;
+
+                                if ( digits.Length == 2 )
+                                {
+                                    break;
+                                }
+                            }
+                            else if ( digits.Length > 0 )
+                            {
+                                break;
+                            }
+                        }
+
+                        if ( digits.Length > 0 )
+                        {
+                            sprite.sprite = Resources.Load<Sprite>( "Texture/Map/Stage" + digits + "/map" + digits );
+                        }
+                    }
+
+                    if ( sprite.sprite == null )
+                    {
+                        Debug.LogError( "[RPGBG] sprite missing " + pathTexture );
+                    }
+                    else
+                    {
+                        Debug.Log( "[RPGBG] L0 name=" + activeRPGStage.Layer.L0[ j ].Name
+                            + " tex=" + sprite.sprite.texture.width + "x" + sprite.sprite.texture.height
+                            + " sprite=" + sprite.sprite.rect.width + "x" + sprite.sprite.rect.height
+                            + " pos=" + trans.localPosition
+                            + " scale=" + trans.localScale );
+                    }
 
                     float w = activeRPGStage.DTL.Width * GameDefine.TEXTURE_WIDTH;
                     float h = activeRPGStage.DTL.Height * GameDefine.TEXTURE_HEIGHT;

@@ -20,6 +20,31 @@ public class GameItemBagUI : MonoBehaviour
 
     public const int MAX_SLOT = 8;
 
+    /// <summary>
+    /// 双栏面板底图：左栏 Item_win_t10，右栏 Item_win_t11。
+    /// 必须显式指定 UI 默认材质，置 null 时 materialForRendering 会回落到 Canvas 默认材质，
+    /// 本工程里该默认材质为空，会导致 CanvasRenderer 没有材质，贴图表现为白块。
+    /// </summary>
+    public static void applyPanelSprite( GameItemBagUI bag , string path )
+    {
+        if ( bag == null )
+            return;
+
+        Image img = bag.GetComponent<Image>();
+
+        if ( img == null )
+            return;
+
+        Sprite sp = Resources.Load<Sprite>( path );
+
+        if ( sp != null )
+            img.sprite = sp;
+
+        img.material = GameMaterial.ui;
+        img.useSpriteMesh = false;
+        img.type = Image.Type.Simple;
+    }
+
     Image image;
     Text text;
 

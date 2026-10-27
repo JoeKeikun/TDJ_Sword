@@ -57,6 +57,8 @@ public class GameMsgBoxTextUI : MonoBehaviour
 
     public void showText( int face , int type , string str )
     {
+        dumpScene( str );
+
         clear();
 
         if ( face != -1 )
@@ -106,6 +108,66 @@ public class GameMsgBoxTextUI : MonoBehaviour
         }
 
         text.showText( str );
+    }
+
+    // 台词出现时输出当前场景的绘制信息，用于定位贴图异常
+    void dumpScene( string str )
+    {
+        Debug.Log( "[UIDUMP] text=" + str + " scene=" + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name );
+
+        Camera cam = Camera.main;
+
+        if ( cam != null )
+        {
+            Debug.Log( "[UIDUMP] camera pos=" + cam.transform.position + " ortho=" + cam.orthographicSize );
+        }
+
+        SpriteRenderer[] sprites = GameObject.FindObjectsOfType<SpriteRenderer>();
+
+        for ( int i = 0 ; i < sprites.Length && i < 70 ; i++ )
+        {
+            SpriteRenderer s = sprites[ i ];
+
+            Debug.Log( "[UIDUMP] sr " + s.gameObject.name
+                + " parent=" + ( s.transform.parent == null ? "-" : s.transform.parent.name )
+                + " sprite=" + ( s.sprite == null ? "null" : s.sprite.name + " " + s.sprite.rect.width + "x" + s.sprite.rect.height )
+                + " pos=" + s.transform.position
+                + " scale=" + s.transform.lossyScale
+                + " color=" + s.color
+                + " order=" + s.sortingOrder );
+        }
+
+        UnityEngine.UI.Image[] images = GameObject.FindObjectsOfType<UnityEngine.UI.Image>();
+
+        for ( int i = 0 ; i < images.Length && i < 60 ; i++ )
+        {
+            UnityEngine.UI.Image img = images[ i ];
+
+            if ( !img.isActiveAndEnabled )
+            {
+                continue;
+            }
+
+            Debug.Log( "[UIDUMP] ui " + img.gameObject.name
+                + " parent=" + ( img.transform.parent == null ? "-" : img.transform.parent.name )
+                + " sprite=" + ( img.sprite == null ? "null" : img.sprite.name + " " + img.sprite.rect.width + "x" + img.sprite.rect.height )
+                + " color=" + img.color
+                + " rect=" + ( img.transform as RectTransform ).sizeDelta );
+        }
+
+        UnityEngine.UI.RawImage[] raws = GameObject.FindObjectsOfType<UnityEngine.UI.RawImage>();
+
+        for ( int i = 0 ; i < raws.Length ; i++ )
+        {
+            UnityEngine.UI.RawImage raw = raws[ i ];
+
+            Debug.Log( "[UIDUMP] raw " + raw.gameObject.name
+                + " parent=" + ( raw.transform.parent == null ? "-" : raw.transform.parent.name )
+                + " texture=" + ( raw.texture == null ? "null" : raw.texture.name + " " + raw.texture.width + "x" + raw.texture.height )
+                + " color=" + raw.color
+                + " active=" + raw.isActiveAndEnabled
+                + " rect=" + ( raw.transform as RectTransform ).sizeDelta );
+        }
     }
 }
 

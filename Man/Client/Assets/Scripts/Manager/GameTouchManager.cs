@@ -12,7 +12,7 @@ class GameTouchManager : SingletonManager<GameTouchManager>
     public bool IsShow { get; set; }
     public override void initSingleton()
     {
-#if ( UNITY_ANDROID || UNITY_IPHONE )
+#if ( UNITY_ANDROID || UNITY_IOS )
         IsShow = true;
 #else
         IsShow = false;
@@ -47,21 +47,25 @@ class GameTouchManager : SingletonManager<GameTouchManager>
     public void OnButtonADown()
     {
         isDonw[ (int)GameInputCode.Confirm ] = true;
+        GameHapticFeedback.Play(GameHapticFeedback.HapticType.Medium);
     }
 
     public void OnButtonBDown()
     {
         isDonw[ (int)GameInputCode.Cancel ] = true;
+        GameHapticFeedback.Play(GameHapticFeedback.HapticType.Light);
     }
 
 
     public void OnDownUp1()
     {
         isDonw[ (int)GameInputCode.Up1 ] = true;
+        GameHapticFeedback.Play(GameHapticFeedback.HapticType.Selection);
     }
     public void OnDownDown1()
     {
         isDonw[ (int)GameInputCode.Down1 ] = true;
+        GameHapticFeedback.Play(GameHapticFeedback.HapticType.Selection);
     }
     public void OnDownUp()
     {
@@ -104,6 +108,44 @@ class GameTouchManager : SingletonManager<GameTouchManager>
     public void OnPressRight()
     {
         isPress[ (int)GameInputCode.Right ] = true;
+    }
+
+    float checkPadTime = 0.0f;
+
+    void Update()
+    {
+        GameSetting setting = GameSetting.instance;
+
+        if ( setting == null || setting.virtualPad )
+        {
+            checkPadTime = 0.0f;
+
+            return;
+        }
+
+        checkPadTime += Time.deltaTime;
+
+        if ( checkPadTime < 1.0f )
+        {
+            return;
+        }
+
+        checkPadTime = 0.0f;
+
+        // 关闭虚拟控制器后如果没有任何外接手柄，自动恢复，避免无法操作
+        if ( Input.GetJoystickNames().Length == 0 )
+        {
+            setting.virtualPad = true;
+
+            setting.save();
+
+            GameTouchCenterUI touch = GameTouchCenterUI.instance;
+
+            if ( touch != null )
+            {
+                touch.applySetting();
+            }
+        }
     }
 
 }

@@ -4,7 +4,7 @@ using System.Collections;
 using System.Runtime.InteropServices;
 
 
-#if UNITY_IPHONE
+#if UNITY_IOS && !IOS_PERSONAL_DEV
 
 public class GameIOSPayData : SingletonManager< GameIOSPayData > 
 {

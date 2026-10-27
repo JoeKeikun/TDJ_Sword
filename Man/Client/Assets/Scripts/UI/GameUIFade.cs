@@ -282,9 +282,12 @@ public class GameUIFade : MonoBehaviour
 
             if ( uiTime > uiT )
             {
+                // 先把最终 alpha 应用上去，再结束，否则会停在倒数第二帧
+                uiAlpha = 1.0f;
+                updateUIStage();
+
                 uiStart = false;
                 uiTime = 0.0f;
-                uiAlpha = 1.0f;
 
 //                updateUIStageOver();
 
@@ -309,9 +312,11 @@ public class GameUIFade : MonoBehaviour
 
             if ( uiTime > uiT )
             {
+                uiAlpha = 0.0f;
+                updateUIStage();
+
                 uiStart = false;
                 uiTime = 0.0f;
-                uiAlpha = 0.0f;
 
 //                updateUIStageOver();
 

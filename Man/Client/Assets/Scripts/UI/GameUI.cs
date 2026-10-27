@@ -71,8 +71,28 @@ public abstract class GameUI<T> : MonoBehaviour where T : GameUI<T>
             gameObject.SetActive( true );
             isShow = true;
 
+            // 真机上 Canvas 的默认 UI 材质可能为空，未显式指定材质的 Image 会画成白块。
+            // 统一补成 UI 默认材质（已有自定义材质的跳过）。
+            Material uiMaterial = getUIMaterial();
+
+            if ( uiMaterial != null )
+            {
+                Image[] images = GetComponentsInChildren<Image>( true );
+
+                for ( int i = 0 ; i < images.Length ; i++ )
+                {
+                    if ( images[ i ] != null && images[ i ].material == null )
+                        images[ i ].material = uiMaterial;
+                }
+            }
+
             onShow();
         }
+    }
+
+    static Material getUIMaterial()
+    {
+        return GameMaterial.ui;
     }
 
     public void unShow()

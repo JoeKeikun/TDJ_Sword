@@ -19,6 +19,9 @@ public class GameSceneRPG : Singleton<GameSceneRPG>
         GameRPGManager.instance.showLayer( 1 );
         GameRPGManager.instance.initPos( GameUserData.instance.TownPosition );
 
+        // 快速读档：落回存档时的格子与朝向
+        GameQuickSave.applyPendingPos();
+
         GameBlackUI.instance.unShowBlack( 1 , null );
 
         GameTouchCenterUI.instance.showUI();

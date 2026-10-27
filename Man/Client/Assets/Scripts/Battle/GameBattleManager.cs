@@ -806,6 +806,19 @@ public class GameBattleManager : Singleton< GameBattleManager >
                     SpriteRenderer sprite = obj.GetComponent<SpriteRenderer>();
                     sprite.sprite = Resources.Load<Sprite>( pathTexture );
 
+                    if ( sprite.sprite == null )
+                    {
+                        Debug.LogError( "[BattleBG] sprite missing " + pathTexture );
+                    }
+                    else
+                    {
+                        Debug.Log( "[BattleBG] L0 name=" + activeBattleStage.Layer.L0[ j ].Name
+                            + " tex=" + sprite.sprite.texture.width + "x" + sprite.sprite.texture.height
+                            + " sprite=" + sprite.sprite.rect.width + "x" + sprite.sprite.rect.height
+                            + " pos=" + trans.localPosition
+                            + " scale=" + trans.localScale );
+                    }
+
                     float w = activeBattleStage.Layer.L0[ j ].Width * GameDefine.TEXTURE_WIDTH;
                     float h = activeBattleStage.Layer.L0[ j ].Height * GameDefine.TEXTURE_HEIGHT;
 
@@ -856,6 +869,12 @@ public class GameBattleManager : Singleton< GameBattleManager >
             string pathTexture = pathDir + activeBattleStage.Layer.L1[ j ].Name;
 
             GameObject imgObject = Resources.Load<GameObject>( pathTexture );
+
+            if ( imgObject == null )
+            {
+                Debug.LogError( "[BattleBG] prefab missing " + pathTexture );
+            }
+
             GameObject obj = Instantiate( imgObject , transBackground );
             obj.name = activeBattleStage.Layer.L1[ j ].Name;
 

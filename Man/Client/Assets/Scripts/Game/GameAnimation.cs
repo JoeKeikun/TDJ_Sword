@@ -542,6 +542,15 @@ public class GameAnimation : MonoBehaviour
         updateColor();
     }
 
+    void checkMaterial( Material mat , int frame , int textureID )
+    {
+        if ( mat == null || mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader" )
+        {
+            Debug.LogError( "[GameAnimation] bad material name=" + animationName + " frame=" + frame
+                + " tex=" + textureID + " mat=" + ( mat == null ? "null" : ( mat.shader == null ? "noShader" : mat.shader.name ) ) );
+        }
+    }
+
     void updateFrame( int f , float scale = 0.5f )
     {
         if ( pause )
@@ -577,6 +586,10 @@ public class GameAnimation : MonoBehaviour
                 RectTransform trans = img.GetComponent<RectTransform>();
 
                 trans.SetParent( transform );
+                // offsetX/offsetY 是以屏幕中心为原点算的（offsetX = -(sceneWidthHalf - xOffset)），
+                // 锚点必须设为中心，否则整块 UI 动画会被推到屏幕外
+                trans.anchorMin = new Vector2( 0.5f , 0.5f );
+                trans.anchorMax = new Vector2( 0.5f , 0.5f );
                 trans.pivot = pivot;
                 trans.localScale = new Vector3( 1.0f , 1.0f , 1.0f );
                 trans.anchoredPosition = new Vector2( saf1[ f ].saf11[ i ].textureX + offsetX
@@ -694,6 +707,19 @@ public class GameAnimation : MonoBehaviour
 
                 image.material = GameMaterialConfig.instance.getMaterial( type );
 
+                checkMaterial( image.material , f , saf1[ f ].saf11[ i ].textureID );
+
+                if ( animationName.Contains( "Shop" ) )
+                {
+                    Diag.write( "[SHOPFRAME] " + animationName + " f=" + f
+                        + " tex=" + saf1[ f ].saf11[ i ].textureID
+                        + " sprite=" + ( image.sprite == null ? "null"
+                            : image.sprite.name + " " + image.sprite.rect.width + "x" + image.sprite.rect.height )
+                        + " pos=" + trans.anchoredPosition + " scale=" + trans.localScale
+                        + " size=" + trans.sizeDelta
+                        + " mat=" + ( image.material == null || image.material.shader == null ? "null" : image.material.shader.name ) );
+                }
+
                 //#if UNITY_EDITOR
                 if ( image.sprite == null )
                 {
@@ -783,6 +809,8 @@ public class GameAnimation : MonoBehaviour
                 }
 
                 spriteRenderer.material = GameMaterialConfig.instance.getMaterial( type );
+
+                checkMaterial( spriteRenderer.material , f , saf1[ f ].saf11[ i ].textureID );
 
                 //#if UNITY_EDITOR
                 if ( spriteRenderer.sprite == null )
