@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -718,8 +718,6 @@ public class GameItemUI : GameUI<GameItemUI>
         // 之前关闭时残留的淡出状态会把整块 UI 的 alpha 停在中间值，
         // 面板看起来就是半透明/发白，这里重新跑一次淡入
         showFade();
-
-        StartCoroutine( UIDiag.dump( transform , "item" ) );
     }
 
 

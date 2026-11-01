@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -708,17 +708,6 @@ public class GameAnimation : MonoBehaviour
                 image.material = GameMaterialConfig.instance.getMaterial( type );
 
                 checkMaterial( image.material , f , saf1[ f ].saf11[ i ].textureID );
-
-                if ( animationName.Contains( "Shop" ) )
-                {
-                    Diag.write( "[SHOPFRAME] " + animationName + " f=" + f
-                        + " tex=" + saf1[ f ].saf11[ i ].textureID
-                        + " sprite=" + ( image.sprite == null ? "null"
-                            : image.sprite.name + " " + image.sprite.rect.width + "x" + image.sprite.rect.height )
-                        + " pos=" + trans.anchoredPosition + " scale=" + trans.localScale
-                        + " size=" + trans.sizeDelta
-                        + " mat=" + ( image.material == null || image.material.shader == null ? "null" : image.material.shader.name ) );
-                }
 
                 //#if UNITY_EDITOR
                 if ( image.sprite == null )

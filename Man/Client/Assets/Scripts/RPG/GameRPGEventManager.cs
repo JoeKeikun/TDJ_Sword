@@ -37,8 +37,6 @@ public class GameRPGEventManager : Singleton<GameRPGEventManager>
 
     void onChangeScene()
     {
-        Debug.Log( "[RPGBG] onChangeScene id=" + changeSceneID + " pos=" + changeScenePos );
-
         GameRPGManager.instance.clear();
 
         GameRPGManager.instance.active( changeSceneID );
@@ -523,8 +521,6 @@ public class GameRPGEventManager : Singleton<GameRPGEventManager>
                 // shop
                 {
                     short id = BitConverter.ToInt16( activeEvent.Data , 0 );
-
-                    Diag.write( "[EVT] shop event id=" + id );
 
 #if UNITY_EDITOR
                     Debug.Log( "0x27 shop " + id );

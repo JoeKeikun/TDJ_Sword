@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -36,8 +36,6 @@ public class GameTitleInput : Singleton<GameTitleInput>
         updateMovie();
 
         updateSLUI();
-
-        updateCloudSLUI();
 
         updateHelpUI();
 
@@ -99,9 +97,6 @@ public class GameTitleInput : Singleton<GameTitleInput>
 
         if ( GameInputManager.getKeyDown( GameInputCode.Right ) )
         {
-            GameSLUI.instance.unShow();
-            GameSLCloudUI.instance.show( GameSLUI.instance.Type );
-            GameSLCloudUI.instance.show();
             return;
         }
 
@@ -111,75 +106,6 @@ public class GameTitleInput : Singleton<GameTitleInput>
         }
 
         GameSLUI.instance.select( selection );
-    }
-
-
-    void moveCloudSLUI()
-    {
-        bool bMove = false;
-
-        if ( GameSLCloudUI.instance.IsShowAskUI )
-        {
-            if ( GameInputManager.getKeyDown( GameInputCode.Left ) )
-            {
-                bMove = true;
-            }
-            if ( GameInputManager.getKeyDown( GameInputCode.Right ) )
-            {
-                bMove = true;
-            }
-            if ( GameInputManager.getKeyDown( GameInputCode.Up ) )
-            {
-                bMove = true;
-            }
-            if ( GameInputManager.getKeyDown( GameInputCode.Down ) )
-            {
-                bMove = true;
-            }
-
-            if ( !bMove )
-            {
-                return;
-            }
-
-            GameSLCloudUI.instance.showAskUI( !GameSLCloudUI.instance.IsOKAskUI );
-
-            return;
-        }
-
-
-        int selection = GameSLCloudUI.instance.Selection;
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Up ) )
-        {
-            selection--;
-            bMove = true;
-        }
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Down ) )
-        {
-            selection++;
-            bMove = true;
-        }
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Left ) )
-        {
-            GameSLCloudUI.instance.unShow();
-            GameSLUI.instance.show();
-            return;
-        }
-
-        if ( GameInputManager.getKeyDown( GameInputCode.Right ) )
-        {
-            return;
-        }
-
-        if ( !bMove )
-        {
-            return;
-        }
-
-        GameSLCloudUI.instance.select( selection );
     }
 
 
@@ -309,62 +235,10 @@ public class GameTitleInput : Singleton<GameTitleInput>
         moveSLUI();
     }
 
-    void updateCloudSLUI()
-    {
-        if ( !GameSLCloudUI.instance.IsShow ||
-            GameBlackUI.instance.IsShow )
-        {
-            return;
-        }
-
-        if ( confirm )
-        {
-            confirm = false;
-
-            GameSLCloudUI.instance.onClick();
-
-            return;
-        }
-
-        if ( cancel )
-        {
-            cancel = false;
-
-            if ( GameSLCloudUI.instance.IsShowAskUI )
-            {
-                GameSLCloudUI.instance.unShowAskUI();
-            }
-            else
-            {
-                GameSLCloudUI.instance.clear();
-                GameSLCloudUI.instance.unShowFade();
-                GameSLCloudUI.instance.AutoUnshow = false;
-
-                GameBlackUI.instance.showBlack( 1.0f , onShowBlackOverCloudUnShowSLUI );
-            }
-
-            return;
-        }
-
-        moveCloudSLUI();
-    }
-
     void onShowBlackOverUnShowSLUI()
     {
         GameSLUI.instance.unShow();
         GameSLUI.instance.updateUIStageFadeOver();
-
-        GameTitleUI.instance.show();
-        GameTitleUI.instance.showFade();
-        GameTitleUI.instance.Pause = true;
-
-        GameBlackUI.instance.unShowBlack( 0.5f , onShowBlackOverUnShowSLUI1 );
-    }
-
-    void onShowBlackOverCloudUnShowSLUI()
-    {
-        GameSLCloudUI.instance.unShow();
-        GameSLCloudUI.instance.updateUIStageFadeOver();
 
         GameTitleUI.instance.show();
         GameTitleUI.instance.showFade();

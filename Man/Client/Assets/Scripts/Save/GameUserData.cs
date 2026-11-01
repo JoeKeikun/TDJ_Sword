@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -23,17 +23,8 @@ public class GameUserData : Singleton<GameUserData>
 {
     const int SAVEDAT_SIZE = 3000;
 
-#if SWORD_CLOUD
-    byte[][] saveDataCloud = new byte[ GameDefine.MAX_SAVE ][];
-#endif
-
-    byte[][] cloudSaveData = new byte[ GameDefine.MAX_SAVE ][];
-
     [SerializeField]
     GameSaveDataInfo[] saveInfo = new GameSaveDataInfo[ GameDefine.MAX_SAVE ];
-
-    [SerializeField]
-    GameSaveDataInfo[] cloudSaveInfo = new GameSaveDataInfo[ GameDefine.MAX_SAVE ];
 
     [SerializeField]
     int gold = 0;
@@ -74,7 +65,6 @@ public class GameUserData : Singleton<GameUserData>
     int[] gameData = new int[ GameDefine.MAX_GAMEDATA ];
 
     public GameSaveDataInfo[] SaveInfo { get { return saveInfo; } }
-    public GameSaveDataInfo[] CloudSaveInfo { get { return cloudSaveInfo; } }
 
     public short[] ItemBag { get { return itemBag; } }
 
@@ -280,7 +270,7 @@ public class GameUserData : Singleton<GameUserData>
     }
 
 
-    public void save( int n , bool cloud )
+    public void save( int n )
     {
 #if ( UNITY_ANDROID ) && !UNITY_EDITOR
         if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
@@ -292,63 +282,31 @@ public class GameUserData : Singleton<GameUserData>
         // buildSaveBytes() 内部会刷新 timeData
         byte[] bytes = buildSaveBytes();
 
-        if ( cloud )
-        {
-            cloudSaveInfo[ n ].Stage = stage;
-            cloudSaveInfo[ n ].Proficiency = proficiency;
-            cloudSaveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
-            cloudSaveInfo[ n ].TurnCount = turnCountAll;
-            cloudSaveInfo[ n ].LV = unitBase[ 0 ].LV;
-            cloudSaveInfo[ n ].Time = time;
-            cloudSaveInfo[ n ].TimeData = timeData;
-        }
-        else
-        {
-            saveInfo[ n ].Stage = stage;
-            saveInfo[ n ].Proficiency = proficiency;
-            saveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
-            saveInfo[ n ].TurnCount = turnCountAll;
-            saveInfo[ n ].LV = unitBase[ 0 ].LV;
-            saveInfo[ n ].Time = time;
-            saveInfo[ n ].TimeData = timeData;
-        }
+        saveInfo[ n ].Stage = stage;
+        saveInfo[ n ].Proficiency = proficiency;
+        saveInfo[ n ].ReloadBattleCount = reloadBattleCountAll;
+        saveInfo[ n ].TurnCount = turnCountAll;
+        saveInfo[ n ].LV = unitBase[ 0 ].LV;
+        saveInfo[ n ].Time = time;
+        saveInfo[ n ].TimeData = timeData;
 
-
-        if ( cloud )
-        {
-            cloudSaveData[ n ] = bytes;
-
-            GameSLCloudUI.instance.showLoading();
-            GamePHP.instance.phpSave( n + GameDefine.MAX_SAVE , bytes , onCloudSave );
-        }
-        else
-        {
-#if SWORD_CLOUD
-            saveDataCloud[ n ] = bytes;
-
-            GameSLUI.instance.showLoading();
-            GamePHP.instance.phpSave( n , bytes , onSaveCloud );
-#else
-            string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
+        string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
 
 #if UNITY_EDITOR
-            Debug.Log( path );
+        Debug.Log( path );
 #endif
 
-            FileStream fs = new FileStream( path , FileMode.Create );
+        FileStream fs = new FileStream( path , FileMode.Create );
 
-            fs.Write( bytes , 0 , bytes.Length );
-            fs.Close();
-            fs.Dispose();
+        fs.Write( bytes , 0 , bytes.Length );
+        fs.Close();
+        fs.Dispose();
 
-            bytes = null;
-#endif
-        }
-
+        bytes = null;
     }
 
 
-    public void load( int n , bool cloud , GameSceneType scene = GameSceneType.Camp )
+    public void load( int n , GameSceneType scene = GameSceneType.Camp )
     {
 #if ( UNITY_ANDROID ) && !UNITY_EDITOR
         if ( PlayerPrefs.GetInt( "Active" , 0 ) == 0 )
@@ -359,25 +317,7 @@ public class GameUserData : Singleton<GameUserData>
 
         byte[] bytes = new byte[ SAVEDAT_SIZE ];
 
-        if ( cloud )
         {
-            bytes = cloudSaveData[ n ];
-
-            if ( bytes == null )
-            {
-                return;
-            }
-        }
-        else
-        {
-#if SWORD_CLOUD
-            bytes = saveDataCloud[ n ];
-
-            if ( bytes == null )
-            {
-                return;
-            }
-#else
             string path = GameSetting.PersistentDataPath + "/Save" + n + ".dat";
 
             if ( !File.Exists( path ) )
@@ -390,7 +330,6 @@ public class GameUserData : Singleton<GameUserData>
             fs.Read( bytes , 0 , SAVEDAT_SIZE );
             fs.Close();
             fs.Dispose();
-#endif
         }
 
 
@@ -884,12 +823,6 @@ public class GameUserData : Singleton<GameUserData>
             copyBytes( ref bytes , ref b , ref index );
         }
 
-#if SWORD_CLOUD
-//         byte[] bb = new byte[ index + 4 ];
-//         for ( int i = 0 ; i < bb.Length ; i++ )
-//             bb[ i ] = bytes[ i ];
-//         GamePHP.instance.phpSave( -1 , bb , null );
-#endif
         string path = BattleSavePathOverride ?? ( GameSetting.PersistentDataPath + "/SaveBattle.dat" );
 
         BattleSavePathOverride = null;
@@ -1835,95 +1768,6 @@ public class GameUserData : Singleton<GameUserData>
         return (short)GameDefine.INVALID_ID;
     }
 
-#if SWORD_CLOUD
-
-    void onSaveCloud( int i , byte[] bytes )
-    {
-        GameSLUI.instance.showLoadingComplete();
-    }
-
-    void onLoadCloud( int i , byte[] bytes )
-    {
-        if ( bytes.Length != SAVEDAT_SIZE )
-        {
-            return;
-        }
-
-        saveDataCloud[ i ] = bytes;
-
-        int index = 0;
-
-        saveInfo[ i ] = new GameSaveDataInfo();
-        saveInfo[ i ].Stage = getInt( ref bytes , ref index );
-        saveInfo[ i ].LV = getShort( ref bytes , ref index );
-        saveInfo[ i ].Proficiency = getInt( ref bytes , ref index );
-        saveInfo[ i ].ReloadBattleCount = getInt( ref bytes , ref index );
-        saveInfo[ i ].TurnCount = getInt( ref bytes , ref index );
-        saveInfo[ i ].Time = getInt( ref bytes , ref index );
-        saveInfo[ i ].TimeData = getInt( ref bytes , ref index );
-
-        if ( GameSLUI.instance.IsShow )
-            GameSLUI.instance.updateData();
-    }
-#endif
-
-    void onCloudSave( int i , byte[] bytes )
-    {
-        GameSLCloudUI.instance.showLoadingComplete();
-    }
-
-    void onCloudLoad( int i , byte[] bytes )
-    {
-        if ( i == 9 )
-        {
-            GameSLCloudUI.instance.showLoadingComplete();
-        }
-
-        if ( bytes.Length != SAVEDAT_SIZE )
-        {
-            return;
-        }
-
-        i -= GameDefine.MAX_SAVE;
-
-        cloudSaveData[ i ] = bytes;
-
-        int index = 0;
-
-        cloudSaveInfo[ i ] = new GameSaveDataInfo();
-        cloudSaveInfo[ i ].Stage = getInt( ref bytes , ref index );
-        cloudSaveInfo[ i ].LV = getShort( ref bytes , ref index );
-        cloudSaveInfo[ i ].Proficiency = getInt( ref bytes , ref index );
-        cloudSaveInfo[ i ].ReloadBattleCount = getInt( ref bytes , ref index );
-        cloudSaveInfo[ i ].TurnCount = getInt( ref bytes , ref index );
-        cloudSaveInfo[ i ].Time = getInt( ref bytes , ref index );
-        cloudSaveInfo[ i ].TimeData = getInt( ref bytes , ref index );
-
-        if ( GameSLCloudUI.instance.IsShow )
-            GameSLCloudUI.instance.updateData();
-    }
-
-    public void loadCloudSaveInfo( string id )
-    {
-        for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
-        {
-            cloudSaveInfo[ i ].Stage = 0;
-            cloudSaveInfo[ i ].LV = 0;
-            cloudSaveInfo[ i ].Proficiency = 0;
-            cloudSaveInfo[ i ].ReloadBattleCount = 0;
-            cloudSaveInfo[ i ].TurnCount = 0;
-            cloudSaveInfo[ i ].Time = 0;
-            cloudSaveInfo[ i ].TimeData = 0;
-
-#if ( UNITY_ANDROID ) && !UNITY_EDITOR
-            GamePHP.instance.phpActive( null );
-#endif
-            GameSLCloudUI.instance.showLoading();
-            GamePHP.instance.phpLoadCloud( id , i + GameDefine.MAX_SAVE , onCloudLoad );
-        }
-
-    }
-
     public void loadSaveInfo()
     {
         for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
@@ -1939,10 +1783,6 @@ public class GameUserData : Singleton<GameUserData>
 #if ( UNITY_ANDROID ) && !UNITY_EDITOR
             GamePHP.instance.phpActive( null );
 #endif
-
-#if SWORD_CLOUD
-            GamePHP.instance.phpLoad( i , onLoadCloud );
-#else
 
             string path = GameSetting.PersistentDataPath + "/Save" + i + ".dat";
 
@@ -1971,7 +1811,6 @@ public class GameUserData : Singleton<GameUserData>
             saveInfo[ i ].TurnCount = getInt( ref bytes , ref index );
             saveInfo[ i ].Time = getInt( ref bytes , ref index );
             saveInfo[ i ].TimeData = getInt( ref bytes , ref index );
-#endif
 
 
         }  

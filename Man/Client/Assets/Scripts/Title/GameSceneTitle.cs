@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -60,7 +60,7 @@ public class GameSceneTitle : Singleton<GameSceneTitle>
         GameTitleUI.instance.select( 0 );
         GameTitleUI.instance.showFade();
 
-        GameTouchCenterUI.instance.applySetting();
+        GameTouchCenterUI.instance.showUI();
     }
 }
 

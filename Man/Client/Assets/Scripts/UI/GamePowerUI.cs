@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -298,6 +298,11 @@ public class GamePowerUI : GameUI<GamePowerUI>
             if ( p > 0 )
             {
                 power[ i ].showFrame( 3 + f );
+            }
+            else
+            {
+                // 0 点时清掉刻度条，露出底图上的空白刻度
+                power[ i ].clearAnimation();
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -108,44 +108,6 @@ class GameTouchManager : SingletonManager<GameTouchManager>
     public void OnPressRight()
     {
         isPress[ (int)GameInputCode.Right ] = true;
-    }
-
-    float checkPadTime = 0.0f;
-
-    void Update()
-    {
-        GameSetting setting = GameSetting.instance;
-
-        if ( setting == null || setting.virtualPad )
-        {
-            checkPadTime = 0.0f;
-
-            return;
-        }
-
-        checkPadTime += Time.deltaTime;
-
-        if ( checkPadTime < 1.0f )
-        {
-            return;
-        }
-
-        checkPadTime = 0.0f;
-
-        // 关闭虚拟控制器后如果没有任何外接手柄，自动恢复，避免无法操作
-        if ( Input.GetJoystickNames().Length == 0 )
-        {
-            setting.virtualPad = true;
-
-            setting.save();
-
-            GameTouchCenterUI touch = GameTouchCenterUI.instance;
-
-            if ( touch != null )
-            {
-                touch.applySetting();
-            }
-        }
     }
 
 }

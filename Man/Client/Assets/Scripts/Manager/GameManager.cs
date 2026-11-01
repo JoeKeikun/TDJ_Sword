@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -106,11 +106,21 @@ public class GameManager : SingletonManager< GameManager >
         GameUserData.instance.init();
     }
 
+    void OnApplicationPause( bool pause )
+    {
+        // 从后台回到前台时重新声明常亮，防止被系统恢复成默认休眠
+        if ( !pause )
+        {
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+        }
+    }
+
     void Start()
     {
-        Diag.write( "[BOOT] start diag v2 path=" + Application.persistentDataPath );
-
         Application.targetFrameRate = 60;
+
+        // 前台运行时常亮屏幕，避免播放剧情/战斗动画时被系统自动锁屏
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
         GameSetting.instance.init();
 

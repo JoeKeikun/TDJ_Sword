@@ -815,7 +815,6 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Android: SWORD_CLOUD
     Standalone: 
   additionalCompilerArguments: {}
   platformArchitecture: {}

@@ -23,3 +23,4 @@ Man/Client/UserSettings/
 
 # 原始素材与构建输入（体积大，不入库）
 /*.apk
+/.trae

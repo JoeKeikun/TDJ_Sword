@@ -6,9 +6,12 @@ using UnityEngine;
 /// 全部读写独立文件，完全不占用、也不读取游戏原本的 5 个存档槽和战斗存档。
 /// 城镇、营地、RPG 复用游戏自身的存档字节格式；
 /// RPG 场景额外记录城镇 ID 与角色坐标，读档后能回到原处。
+/// 支持多个档位（SLOT_COUNT），每个档位一套独立文件。
 /// </summary>
 public static class GameQuickSave
 {
+    public const int SLOT_COUNT = 3;
+
     public const string MODE_CAMP = "camp";
     public const string MODE_BATTLE = "battle";
     public const string MODE_RPG = "rpg";
@@ -22,43 +25,52 @@ public static class GameQuickSave
 
     static string Dir { get { return GameSetting.PersistentDataPath; } }
 
-    public static string DataPath { get { return Dir + "/QuickSave.dat"; } }
-    public static string ModePath { get { return Dir + "/QuickSave.mode"; } }
-    public static string RpgPath { get { return Dir + "/QuickSave.rpg"; } }
+    public static string dataPath( int slot ) { return Dir + "/QuickSave_" + slot + ".dat"; }
+    public static string modePath( int slot ) { return Dir + "/QuickSave_" + slot + ".mode"; }
+    public static string rpgPath( int slot ) { return Dir + "/QuickSave_" + slot + ".rpg"; }
 
     // 战斗档单独一份，不碰原版的 SaveBattle.dat
-    public static string QuickBattlePath { get { return Dir + "/QuickBattle.dat"; } }
+    public static string quickBattlePath( int slot ) { return Dir + "/QuickBattle_" + slot + ".dat"; }
 
     static string LegacySlotPath { get { return Dir + "/Save" + ( GameDefine.MAX_SAVE - 1 ) + ".dat"; } }
     static string LegacyBakPath { get { return LegacySlotPath + ".quickbak"; } }
 
-    public static bool HasSave
+    public static bool HasSave( int slot )
     {
-        get
+        if ( slot < 0 || slot >= SLOT_COUNT )
         {
-            if ( !File.Exists( ModePath ) )
-            {
-                return false;
-            }
-
-            string mode = File.ReadAllText( ModePath ).Trim();
-
-            if ( mode == MODE_BATTLE )
-            {
-                return File.Exists( QuickBattlePath );
-            }
-
-            if ( mode == MODE_RPG )
-            {
-                return File.Exists( DataPath ) && File.Exists( RpgPath );
-            }
-
-            return File.Exists( DataPath );
+            return false;
         }
+
+        string mp = modePath( slot );
+
+        if ( !File.Exists( mp ) )
+        {
+            return false;
+        }
+
+        string mode = File.ReadAllText( mp ).Trim();
+
+        if ( mode == MODE_BATTLE )
+        {
+            return File.Exists( quickBattlePath( slot ) );
+        }
+
+        if ( mode == MODE_RPG )
+        {
+            return File.Exists( dataPath( slot ) ) && File.Exists( rpgPath( slot ) );
+        }
+
+        return File.Exists( dataPath( slot ) );
     }
 
-    public static bool save()
+    public static bool save( int slot )
     {
+        if ( slot < 0 || slot >= SLOT_COUNT )
+        {
+            return false;
+        }
+
         GameSceneType scene = GameSceneManager.instance.SceneType;
 
         bool battle = scene == GameSceneType.Battle;
@@ -69,13 +81,13 @@ public static class GameQuickSave
             if ( battle )
             {
                 // 写到独立的战斗档，原版 SaveBattle.dat 保持不动
-                GameUserData.instance.BattleSavePathOverride = QuickBattlePath;
+                GameUserData.instance.BattleSavePathOverride = quickBattlePath( slot );
 
                 GameUserData.instance.saveBattle();
             }
             else
             {
-                if ( !GameUserData.instance.saveToFile( DataPath ) )
+                if ( !GameUserData.instance.saveToFile( dataPath( slot ) ) )
                 {
                     return false;
                 }
@@ -92,31 +104,36 @@ public static class GameQuickSave
 
         if ( rpg )
         {
-            writeRpg();
+            writeRpg( slot );
         }
-        else if ( File.Exists( RpgPath ) )
+        else if ( File.Exists( rpgPath( slot ) ) )
         {
-            File.Delete( RpgPath );
+            File.Delete( rpgPath( slot ) );
         }
 
-        File.WriteAllText( ModePath , battle ? MODE_BATTLE : ( rpg ? MODE_RPG : MODE_CAMP ) );
+        File.WriteAllText( modePath( slot ) , battle ? MODE_BATTLE : ( rpg ? MODE_RPG : MODE_CAMP ) );
 
         return true;
     }
 
-    public static bool load()
+    public static bool load( int slot )
     {
-        if ( GameSceneManager.instance.IsLoading || !HasSave )
+        if ( slot < 0 || slot >= SLOT_COUNT )
         {
             return false;
         }
 
-        string mode = File.ReadAllText( ModePath ).Trim();
+        if ( GameSceneManager.instance.IsLoading || !HasSave( slot ) )
+        {
+            return false;
+        }
+
+        string mode = File.ReadAllText( modePath( slot ) ).Trim();
 
         if ( mode == MODE_BATTLE )
         {
             // loadBattle() 读完后会立即清空该路径
-            GameUserData.instance.BattleSavePathOverride = QuickBattlePath;
+            GameUserData.instance.BattleSavePathOverride = quickBattlePath( slot );
 
             if ( GameSceneManager.instance.SceneType == GameSceneType.Battle )
             {
@@ -131,17 +148,17 @@ public static class GameQuickSave
             return true;
         }
 
-        if ( mode == MODE_RPG && readRpg() )
+        if ( mode == MODE_RPG && readRpg( slot ) )
         {
             // 城镇 ID 不在原生存档里，单独补回来
             GameUserData.instance.setTown( pendingTown );
 
-            GameUserData.instance.loadFromFile( DataPath , GameSceneType.Rpg );
+            GameUserData.instance.loadFromFile( dataPath( slot ) , GameSceneType.Rpg );
 
             return true;
         }
 
-        GameUserData.instance.loadFromFile( DataPath , GameSceneType.Camp );
+        GameUserData.instance.loadFromFile( dataPath( slot ) , GameSceneType.Camp );
 
         return true;
     }
@@ -186,7 +203,7 @@ public static class GameQuickSave
         }
     }
 
-    static void writeRpg()
+    static void writeRpg( int slot )
     {
         GameRPGManager manager = GameRPGManager.instance;
 
@@ -195,17 +212,19 @@ public static class GameQuickSave
             return;
         }
 
-        File.WriteAllText( RpgPath , manager.ActiveID + "|" + manager.PosX + "|" + manager.PosY + "|" + manager.Direction );
+        File.WriteAllText( rpgPath( slot ) , manager.ActiveID + "|" + manager.PosX + "|" + manager.PosY + "|" + manager.Direction );
     }
 
-    static bool readRpg()
+    static bool readRpg( int slot )
     {
-        if ( !File.Exists( RpgPath ) )
+        string rp = rpgPath( slot );
+
+        if ( !File.Exists( rp ) )
         {
             return false;
         }
 
-        string[] parts = File.ReadAllText( RpgPath ).Split( '|' );
+        string[] parts = File.ReadAllText( rp ).Split( '|' );
 
         if ( parts.Length < 4 )
         {

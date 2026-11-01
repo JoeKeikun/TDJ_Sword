@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -1114,13 +1114,29 @@ public class GameBattleManager : Singleton< GameBattleManager >
                                 if ( unit.canAddItem() )
                                 {
                                     unit.addItem( evt.ItemGetParm1 );
+
+                                    GameBattleGetItemUI.instance.show( evt.ItemGetParm1 , 0 , null );
+                                }
+                                else if ( !GameUserData.instance.itemFull() )
+                                {
+                                    // 角色行囊已满，改放入公共行囊
+                                    GameUserData.instance.addItem( evt.ItemGetParm1 );
+
+                                    string msg = GameStringData.instance.getString( GameStringType.ItemFullToBag );
+                                    msg = msg.Replace( "0" , unit.Name );
+
+                                    GameBattleGetItemUI.instance.showMessage( msg , null );
                                 }
                                 else
                                 {
-                                    GameUserData.instance.addItem( evt.ItemGetParm1 );
+                                    // 角色行囊与公共行囊都已满：提示并保留地图上的物品
+                                    GameBattleGetItemUI.instance.showMessage(
+                                        GameStringData.instance.getString( GameStringType.BagFull ) , null );
+
+                                    onCheckMapEvent();
+                                    return;
                                 }
 
-                                GameBattleGetItemUI.instance.show( evt.ItemGetParm1 , 0 , null );
                                 onCheckMapEvent();
                             }
                             break;

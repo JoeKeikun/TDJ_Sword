@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -63,6 +63,18 @@ public class GameBattleGetItemUI : GameUI<GameBattleGetItemUI>
 
             str = str.Replace( "0" , GameDefine.getBigInt( gold.ToString() ) );
         }
+
+        text.text = str;
+
+        time = 0.0f;
+    }
+
+    /// <summary>直接显示一段提示文字（如行囊已满）</summary>
+    public void showMessage( string str , OnEventOver over )
+    {
+        onEventOver = over;
+
+        show();
 
         text.text = str;
 

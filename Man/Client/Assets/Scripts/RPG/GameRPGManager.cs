@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -352,21 +352,12 @@ public class GameRPGManager : Singleton<GameRPGManager>
     {
         string path = GameDefine.getString2( activeID );
 
-        Debug.Log( "[RPGBG] showLayer id=" + id + " activeID=" + activeID
-            + " stage=" + ( activeRPGStage == null ? "null" : "ok" )
-            + " L0=" + ( activeRPGStage == null || activeRPGStage.Layer == null ? -1 : activeRPGStage.Layer.L0.Length )
-            + " L1=" + ( activeRPGStage == null || activeRPGStage.Layer == null ? -1 : activeRPGStage.Layer.L1.Length ) );
-
         if ( objsLayer0 == null ||
             objsLayer0.Length != activeRPGStage.Layer.L0.Length )
             objsLayer0 = new GameObject[ activeRPGStage.Layer.L0.Length ];
 
         for ( int j = 0 ; j < activeRPGStage.Layer.L0.Length ; j++ )
         {
-            Debug.Log( "[RPGBG] L0[" + j + "] ID=" + activeRPGStage.Layer.L0[ j ].ID
-                + " Name=" + activeRPGStage.Layer.L0[ j ].Name
-                + " cached=" + ( objsLayer0[ j ] != null ) );
-
             if ( activeRPGStage.Layer.L0[ j ].ID == id )
             {
                 if ( objsLayer0[ j ] != null )
@@ -483,24 +474,24 @@ public class GameRPGManager : Singleton<GameRPGManager>
                     {
                         Debug.LogError( "[RPGBG] sprite missing " + pathTexture );
                     }
-                    else
+                    else if ( activeRPGStage.Layer.L0[ j ].Name.ToLower().Contains( "map01" ) &&
+                        activeDTL != null )
                     {
-                        Debug.Log( "[RPGBG] L0 name=" + activeRPGStage.Layer.L0[ j ].Name
-                            + " tex=" + sprite.sprite.texture.width + "x" + sprite.sprite.texture.height
-                            + " sprite=" + sprite.sprite.rect.width + "x" + sprite.sprite.rect.height
-                            + " pos=" + trans.localPosition
-                            + " scale=" + trans.localScale );
-                    }
+                        // 客栈底图（map01）和本关格子数据不是配套的：
+                        // 图片 2048×2048，内容只占上部，第 1394 行以下是纯黑留白，
+                        // 按原逻辑贴格子左上角会让最上面几行落在墙面上。
+                        // 保持原图 1:1 尺寸不缩放，只把内容底部对齐到格子区域底部。
+                        const float CONTENT_BOTTOM_PX = 1394.0f;
 
-                    float w = activeRPGStage.DTL.Width * GameDefine.TEXTURE_WIDTH;
-                    float h = activeRPGStage.DTL.Height * GameDefine.TEXTURE_HEIGHT;
+                        float contentH = CONTENT_BOTTOM_PX / sprite.sprite.pixelsPerUnit;
+                        float gridH = activeDTL.Height * GameDefine.TEXTURE_HEIGHT;
 
-                    if ( w == 4096 || h == 4096 )
-                    {
-                        w = w / activeRPGStage.DTL.Width * GameDefine.TEXTURE_WIDTH;
-                        h = w / activeRPGStage.DTL.Height * GameDefine.TEXTURE_HEIGHT;
+                        trans.localScale = Vector3.one;
 
-                        trans.localScale = new Vector3( w , h , 1.0f );
+                        trans.localPosition = new Vector3( 0.0f , layerHeight + contentH - gridH , z );
+
+                        Debug.Log( "[RPGBG] map01 keep scale, shiftY=" + ( contentH - gridH ) +
+                            " contentH=" + contentH + " gridH=" + gridH );
                     }
 
                     objsLayer0[ j ] = obj;

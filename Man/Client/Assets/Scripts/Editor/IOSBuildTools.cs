@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿﻿using UnityEngine;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using System.IO;
@@ -84,13 +84,8 @@ public class IOSBuildTools
         PlayerSettings.iOS.allowHTTPDownload = true;
         Debug.Log("[iOS Build Tools] 8. HTTP下载: 开启");
 
-        // 9. 设置状态栏行为
-#if UNITY_2022_2_OR_NEWER
-        PlayerSettings.iOS.statusBarStyle = iOSStatusBarStyle.Default;
-#else
-        PlayerSettings.iOS.statusBarHidden = true;
-#endif
-        Debug.Log("[iOS Build Tools] 9. 状态栏: 隐藏");
+        // 9. 状态栏行为由 Xcode 工程 Info.plist 控制（Unity 2022 已移除该 API）
+        Debug.Log("[iOS Build Tools] 9. 状态栏: 由 Info.plist 控制");
 
         // 10. 设置帧率
         Application.targetFrameRate = 60;
@@ -179,104 +174,6 @@ public class IOSBuildTools
 
         Debug.Log(config);
         EditorUtility.DisplayDialog("iOS配置状态", config, "好的");
-    }
-
-    // iOS/Metal 不支持 ETC / DXT，必须使用 ASTC。
-    // Unity 2020.1 起枚举名去掉了 RGB/RGBA 前缀，这里做版本兼容。
-#if UNITY_2020_1_OR_NEWER
-    private const TextureImporterFormat IOSFormatRGBA = TextureImporterFormat.ASTC_6x6;
-    private const TextureImporterFormat IOSFormatRGB = TextureImporterFormat.ASTC_6x6;
-#else
-    private const TextureImporterFormat IOSFormatRGBA = TextureImporterFormat.ASTC_RGBA_6x6;
-    private const TextureImporterFormat IOSFormatRGB = TextureImporterFormat.ASTC_RGB_6x6;
-#endif
-
-    /// <summary>
-    /// 批量为选中贴图设置 iOS 平台的 ASTC 压缩。
-    /// 可选中单张贴图，也可选中整个文件夹（递归生效）。
-    /// </summary>
-    [MenuItem("天地劫/iOS/贴图压缩改为 ASTC (选中贴图/文件夹)")]
-    public static void SetSelectedTexturesASTC()
-    {
-        UnityEngine.Object[] textures = Selection.GetFiltered(typeof(Texture2D), SelectionMode.DeepAssets);
-        if (textures.Length == 0)
-        {
-            EditorUtility.DisplayDialog("提示", "请先在 Project 窗口选中贴图或文件夹。", "好的");
-            return;
-        }
-
-        int changed = 0;
-        foreach (UnityEngine.Object obj in textures)
-        {
-            string path = AssetDatabase.GetAssetPath(obj);
-            TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (ti == null)
-            {
-                continue;
-            }
-
-            bool hasAlpha = ti.DoesSourceTextureHaveAlpha();
-
-            TextureImporterPlatformSettings settings = new TextureImporterPlatformSettings();
-            settings.overridden = true;
-            settings.name = "iPhone";
-            settings.format = hasAlpha ? IOSFormatRGBA : IOSFormatRGB;
-            settings.maxTextureSize = 4096;
-            settings.compressionQuality = 100;
-            // ASTC 不支持 crunched 压缩，必须关闭
-            settings.crunchedCompression = false;
-            settings.textureCompression = TextureImporterCompression.Compressed;
-
-            ti.SetPlatformTextureSettings(settings);
-            ti.SaveAndReimport();
-            changed++;
-        }
-
-        Debug.Log("[iOS Build Tools] 已将 " + changed + " 张贴图的 iPhone 平台格式设为 ASTC。");
-        EditorUtility.DisplayDialog("完成", "已处理 " + changed + " 张贴图。", "好的");
-    }
-
-    /// <summary>
-    /// 检查 SAF 转换所需目录是否存在，并报告缺失项。
-    /// </summary>
-    [MenuItem("天地劫/iOS/检查 SAF 资源目录")]
-    public static void CheckSafResourceDirs()
-    {
-        string assetsRoot = Application.dataPath;
-
-        string[] requiredDirs = new string[]
-        {
-            "Objects/SAF",              // SAF 动画源文件
-            "Objects/Texture",          // 动画贴图（Sprite Sheet）
-            "Objects/DAT/Misc",         // 全局数据表
-            "Objects/DAT/Stage",        // 关卡战斗数据
-            "Objects/DAT/Rpg",          // RPG 地图数据
-            "Objects/DAT/Camp",         // 营地脚本数据
-            "Resources/Prefab",         // 转换后的动画预制体
-            "Resources/Texture",        // 运行时贴图
-            "Resources/Music",
-            "Resources/Sound",
-            "Resources/Movie"
-        };
-
-        string report = "===== SAF 资源目录检查 =====\n\n";
-        int missing = 0;
-
-        foreach (string dir in requiredDirs)
-        {
-            string full = Path.Combine(assetsRoot, dir);
-            bool exists = Directory.Exists(full);
-            report += (exists ? "✓ " : "✗ ") + "Assets/" + dir + "\n";
-            if (!exists)
-            {
-                missing++;
-            }
-        }
-
-        report += "\n缺失目录数: " + missing + " / " + requiredDirs.Length;
-
-        Debug.Log(report);
-        EditorUtility.DisplayDialog("SAF 资源检查", report, "好的");
     }
 
     #region 辅助方法

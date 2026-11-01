@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +19,6 @@ public class GameImageText : Text
     int showIndex = 0;
     bool isOver = false;
     float time = 0.0f;
-    int line = 0;
 
     bool isStopLine = false;
 
@@ -50,7 +49,6 @@ public class GameImageText : Text
         speed = 0.1f;
         time = 0.0f;
         showIndex = 0;
-        line = 0;
     }
 
     protected override void OnPopulateMesh( VertexHelper toFill )
@@ -69,9 +67,45 @@ public class GameImageText : Text
 
         if ( showIndex > text1.Length )
         {
-            start = false;
             text = text1;
-            isOver = true;
+
+            finishText();
+
+            return;
+        }
+
+        string current = text1.Substring( 0 , showIndex );
+
+        int fit;
+
+        // 按实际排版高度判断当前页是否写满，不能只数换行符：
+        // 长对白会自动折行，超出文本框的行会被 Truncate 截掉。
+        if ( isOverflow( current , out fit ) )
+        {
+            string page = text1.Substring( 0 , fit );
+            string rest = text1.Substring( fit );
+
+            // 翻页后开头的换行符会显示成空行，去掉
+            while ( rest.Length > 0 && rest[ 0 ] == '\n' )
+            {
+                rest = rest.Remove( 0 , 1 );
+            }
+
+            // 只显示能完整放进文本框的部分，剩余文字等玩家点击后翻页继续
+            text = page;
+
+            if ( rest.Length == 0 )
+            {
+                finishText();
+
+                return;
+            }
+
+            isStopLine = true;
+            speed = 0.1f;
+
+            text1 = rest;
+            showIndex = 0;
 
             gameAnimation.offsetX = (int)( ( uiVertex.position.x + 20 ) / 2.0f );
             gameAnimation.offsetY = (int)( ( uiVertex.position.y + 20 ) / 2.0f );
@@ -80,33 +114,61 @@ public class GameImageText : Text
             return;
         }
 
-        if ( showIndex > 20 &&
-            uiVertex.position.y < 20 && uiVertex.position.x > 500 )
+        text = current;
+    }
+
+    void finishText()
+    {
+        start = false;
+        isOver = true;
+
+        gameAnimation.offsetX = (int)( ( uiVertex.position.x + 20 ) / 2.0f );
+        gameAnimation.offsetY = (int)( ( uiVertex.position.y + 20 ) / 2.0f );
+        gameAnimation.playAnimation( 27 , 41 );
+    }
+
+    /// <summary>判断文字是否超出文本框；超出时 fit 返回能完整显示的最大字符数</summary>
+    bool isOverflow( string str , out int fit )
+    {
+        fit = str.Length;
+
+        float visible = rectTransform.rect.height;
+
+        if ( getPreferredHeight( str ) <= visible + 0.01f )
         {
-            line = 4;
-            showIndex--;
+            return false;
         }
 
-        text = text1.Substring( 0 , showIndex );
+        int lo = 1;
+        int hi = str.Length - 1;
+        int best = 0;
 
-        if ( text[ text.Length - 1 ] == '\n' )
+        while ( lo <= hi )
         {
-            line++;
+            int mid = ( lo + hi ) / 2;
+
+            if ( getPreferredHeight( str.Substring( 0 , mid ) ) <= visible + 0.01f )
+            {
+                best = mid;
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
         }
 
-        if ( line > 3 )
-        {
-            isStopLine = true;
-            speed = 0.1f;
-            text1 = text1.Remove( 0 , showIndex );
-            showIndex = 0;
-            line = 0;
+        fit = best > 0 ? best : 1;
 
-            gameAnimation.offsetX = (int)( ( uiVertex.position.x + 20 ) / 2.0f );
-            gameAnimation.offsetY = (int)( ( uiVertex.position.y + 20 ) / 2.0f );
-            gameAnimation.playAnimation( 27 , 41 );
-        }
+        return true;
+    }
 
+    /// <summary>按当前文本框宽度换行后，文字需要的总高度</summary>
+    float getPreferredHeight( string str )
+    {
+        TextGenerationSettings settings = GetGenerationSettings( rectTransform.rect.size );
+
+        return cachedTextGeneratorForLayout.GetPreferredHeight( str , settings ) / pixelsPerUnit;
     }
 
     public void onClick()

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -328,8 +328,6 @@ public class GameShopUI : GameUI<GameShopUI>
 
     public void show( GameRPGShopInfo i , OnEventOver over )
     {
-        Diag.write( "[SHOPUI] enter show(info)" );
-
         info = i;
 
         onEventOver = over;
@@ -351,11 +349,6 @@ public class GameShopUI : GameUI<GameShopUI>
         string path = "Prefab/Shop/Shop" + GameDefine.getString2( info.shop );
 
         GameObject gameOjbect = Resources.Load<GameObject>( path );
-        Diag.write( "[SHOP] path=" + path + " prefab=" + ( gameOjbect == null ? "null" : "ok" )
-            + " shop=" + info.shop + " type=" + info.type
-            + " sceneW=" + GameCameraManager.instance.sceneWidthHalf
-            + " sceneH=" + GameCameraManager.instance.sceneHeightHalf
-            + " xOff=" + GameCameraManager.instance.xOffset );
         GameObject obj = Instantiate( gameOjbect , transBackground );
         Transform trans = obj.transform;
         trans.localPosition = new Vector3( 0.0f , 0.0f , 0.0f );
@@ -411,42 +404,7 @@ public class GameShopUI : GameUI<GameShopUI>
         Background1.gameObject.SetActive( true );
         Background2.gameObject.SetActive( true );
 
-        dumpImage( "shop" , shopUI.GetComponent<Image>() );
-        dumpImage( "bag" , bagUI.GetComponent<Image>() );
-        dumpImage( "Background1" , Background1 );
-        dumpImage( "Background2" , Background2 );
-
         showFade();
-
-        StartCoroutine( UIDiag.dump( transform , "shop" ) );
-    }
-
-    static void dumpImage( string tag , Image img )
-    {
-        if ( img == null )
-        {
-            Diag.write( "[SHOPIMG] " + tag + " = null image" );
-            return;
-        }
-
-        Sprite sp = img.sprite;
-        Rect r = img.rectTransform.rect;
-
-        Diag.write( "[SHOPIMG] " + tag
-            + " active=" + img.gameObject.activeInHierarchy
-            + " enabled=" + img.enabled
-            + " sprite=" + ( sp == null ? "null" : sp.name )
-            + " spriteRect=" + ( sp == null ? "-" : sp.rect.width + "x" + sp.rect.height )
-            + " tex=" + ( sp == null || sp.texture == null ? "-" : sp.texture.name + " " + sp.texture.width + "x" + sp.texture.height )
-            + " color=" + img.color
-            + " rect=" + r.width + "x" + r.height
-            + " pos=" + img.rectTransform.anchoredPosition
-            + " parent=" + ( img.transform.parent == null ? "-" : img.transform.parent.name )
-            + " sibling=" + img.transform.GetSiblingIndex()
-            + " mainTex=" + ( img.mainTexture == null ? "null" : img.mainTexture.name )
-            + " crMat=" + ( img.canvasRenderer.GetMaterial() == null ? "null" : img.canvasRenderer.GetMaterial().name )
-            + " native=" + ( img.mainTexture == null ? "-" : img.mainTexture.GetNativeTexturePtr().ToString() )
-            + " alphaTex=" + ( sp == null || sp.texture == null || sp.associatedAlphaSplitTexture == null ? "none" : sp.associatedAlphaSplitTexture.name ) );
     }
 
 
