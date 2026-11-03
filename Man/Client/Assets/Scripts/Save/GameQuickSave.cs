@@ -32,7 +32,9 @@ public static class GameQuickSave
     // 战斗档单独一份，不碰原版的 SaveBattle.dat
     public static string quickBattlePath( int slot ) { return Dir + "/QuickBattle_" + slot + ".dat"; }
 
-    static string LegacySlotPath { get { return Dir + "/Save" + ( GameDefine.MAX_SAVE - 1 ) + ".dat"; } }
+    // 旧版借用的是当时最后一个槽位（5 槽时代的 Save4.dat），
+    // 槽位扩充后不能再跟着 MAX_SAVE 走，固定写死
+    static string LegacySlotPath { get { return Dir + "/Save4.dat"; } }
     static string LegacyBakPath { get { return LegacySlotPath + ".quickbak"; } }
 
     public static bool HasSave( int slot )

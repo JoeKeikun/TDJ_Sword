@@ -90,14 +90,17 @@ public class GameTitleInput : Singleton<GameTitleInput>
             bMove = true;
         }
 
+        // 存档槽多了以后，左右键整页翻
         if ( GameInputManager.getKeyDown( GameInputCode.Left ) )
         {
-            return;
+            selection -= GameSLUI.PAGE_SIZE;
+            bMove = true;
         }
 
         if ( GameInputManager.getKeyDown( GameInputCode.Right ) )
         {
-            return;
+            selection += GameSLUI.PAGE_SIZE;
+            bMove = true;
         }
 
         if ( !bMove )

@@ -16,23 +16,32 @@ public enum GameSLType
 
 public class GameSLUI : GameUI<GameSLUI>
 {
-    GameSLUISlot[] slot = new GameSLUISlot[ GameDefine.MAX_SAVE ];
+    // 场景里只有 item0~item4 五个槽位控件，
+    // 存档槽扩到与关卡数一致后，这五个控件当成一页窗口翻页显示
+    public const int PAGE_SIZE = 5;
+
+    GameSLUISlot[] slot = new GameSLUISlot[ PAGE_SIZE ];
 
     GameSLType slType;
 
     Text text;
     Text loading;
 
+    string title = "";
+
     int selection = 0;
+    int page = 0;
     GameAskUI askUI;
 
     public int Selection { get { return selection; } }
     public GameSLType Type { get { return slType; } }
 
+    public int PageCount { get { return ( GameDefine.MAX_SAVE + PAGE_SIZE - 1 ) / PAGE_SIZE; } }
+
 
     public override void initSingleton()
     {
-        for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
+        for ( int i = 0 ; i < PAGE_SIZE ; i++ )
         {
             slot[ i ] = transform.Find( "item" + i ).GetComponent<GameSLUISlot>();
         }
@@ -105,30 +114,63 @@ public class GameSLUI : GameUI<GameSLUI>
             selection = 0;
         }
 
-        if ( selection >= GameDefine.MAX_SAVE - 1 )
+        if ( selection >= GameDefine.MAX_SAVE )
         {
             selection = GameDefine.MAX_SAVE - 1;
         }
 
-        for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
+        int newPage = selection / PAGE_SIZE;
+
+        for ( int i = 0 ; i < slot.Length ; i++ )
         {
             slot[ i ].clear();
         }
 
-        slot[ selection ].select();
+        // 翻页时重新绑定这一页窗口显示的存档
+        if ( newPage != page )
+        {
+            page = newPage;
+
+            updateData();
+        }
+
+        int row = selection - page * PAGE_SIZE;
+
+        if ( row >= 0 && row < slot.Length )
+        {
+            slot[ row ].select();
+        }
     }
 
     public void updateData()
     {
-        for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
+        for ( int i = 0 ; i < slot.Length ; i++ )
         {
-            slot[ i ].setData( GameUserData.instance.SaveInfo[ i ] );
+            int saveIndex = page * PAGE_SIZE + i;
+
+            // 保险：saveInfo 是场景序列化字段，长度可能滞后于 MAX_SAVE
+            if ( saveIndex < GameDefine.MAX_SAVE && saveIndex < GameUserData.instance.SaveInfo.Length )
+            {
+                slot[ i ].gameObject.SetActive( true );
+                slot[ i ].setData( GameUserData.instance.SaveInfo[ saveIndex ] , saveIndex );
+            }
+            else
+            {
+                slot[ i ].gameObject.SetActive( false );
+            }
         }
+
+        updateTitle();
+    }
+
+    void updateTitle()
+    {
+        text.text = title + "  " + ( page + 1 ) + "/" + PageCount;
     }
 
     public void clear()
     {
-        for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
+        for ( int i = 0 ; i < slot.Length ; i++ )
         {
             slot[ i ].clear();
         }
@@ -140,8 +182,11 @@ public class GameSLUI : GameUI<GameSLUI>
 
         show();
 
-        text.text = GameStringData.instance.getString( GameStringType.SL5 + (int)t );
+        title = GameStringData.instance.getString( GameStringType.SL5 + (int)t );
         loading.text = "";
+
+        page = 0;
+        selection = 0;
 
         updateData();
     }
@@ -157,7 +202,19 @@ public class GameSLUI : GameUI<GameSLUI>
     {
         askUI.show( b );
 
-        RectTransform trans = slot[ selection ].GetComponent<RectTransform>();
+        int row = selection - page * PAGE_SIZE;
+
+        if ( row < 0 )
+        {
+            row = 0;
+        }
+
+        if ( row >= slot.Length )
+        {
+            row = slot.Length - 1;
+        }
+
+        RectTransform trans = slot[ row ].GetComponent<RectTransform>();
         askUI.setPos( trans.anchoredPosition.x + 80 , trans.anchoredPosition.y + 11 );
     }
 

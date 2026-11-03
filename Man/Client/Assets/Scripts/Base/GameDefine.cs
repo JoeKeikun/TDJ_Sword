@@ -32,7 +32,8 @@ public enum GameUserDataType
 
 public class GameDefine
 {
-    public const int MAX_SAVE = 5;
+    // 存档槽位扩到 40，方便逐关存档调试
+    public const int MAX_SAVE = 40;
 
     public const int MAX_STAGE = 36;
     public const int MAX_RPG_STAGE = 27;

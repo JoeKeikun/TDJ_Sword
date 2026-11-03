@@ -119,6 +119,21 @@ public class GameMsgBoxChooseUI : GameUI<GameMsgBoxChooseUI>
         onEventOver = over;
     }
 
+    protected override void onUIFadeIn()
+    {
+        base.onUIFadeIn();
+
+        if ( isFadeIn )
+        {
+            return;
+        }
+
+        // 淡入结束会把文字颜色恢复成淡入开始时缓存的不透明颜色，
+        // 覆盖掉 select() 里给未选中项设的 0.2 透明度，
+        // 导致图标是未选中、文字却还是选中态。这里重新应用一次。
+        updateAnimations();
+    }
+
     public override void onUnShow()
     {
         clear();

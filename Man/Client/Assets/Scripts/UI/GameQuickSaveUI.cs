@@ -24,6 +24,10 @@ public class GameQuickSaveUI : MonoBehaviour
     bool dirty = true;
     bool wasVisible = false;
 
+    // 存档按钮正常态颜色（标题画面置灰时需要还原）
+    Color saveBgNormalColor;
+    Color saveTextNormalColor = Color.white;
+
     static Material uiMaterial = null;
 
     // 屏幕可用高度约 462（Canvas 参考 800 宽、按宽度匹配），
@@ -117,6 +121,13 @@ public class GameQuickSaveUI : MonoBehaviour
         saveButton = createButton( "save" , "存 档" , new Vector2( BTN_X , SAVE_Y ) , onSave );
         loadButton = createButton( "load" , "读 档" , new Vector2( BTN_X , LOAD_Y ) , onLoad );
 
+        // 记录存档按钮正常态颜色，标题画面禁用时需要还原
+        Image saveBg = saveButton.GetComponent<Image>();
+        if ( saveBg != null )
+        {
+            saveBgNormalColor = saveBg.color;
+        }
+
         refresh();
     }
 
@@ -157,13 +168,13 @@ public class GameQuickSaveUI : MonoBehaviour
 
     void updateVisible()
     {
-        // 标题界面用不到快速存读档
-        bool inGame = GameSceneManager.instance.SceneType != GameSceneType.Title;
+        // 标题画面也展示快速存读档：读档可用，存档按钮置灰禁用防误触
+        bool isTitle = GameSceneManager.instance.SceneType == GameSceneType.Title;
 
         // 「今况记入 / 前历再续」界面打开时隐藏，避免压住存档槽位
         bool slOpen = ( GameSLUI.instance != null && GameSLUI.instance.IsShow );
 
-        bool visible = inGame && !slOpen;
+        bool visible = !slOpen;
 
         // 每次变为可见时重新读一次档位状态，平时不重复读文件
         if ( visible && !wasVisible )
@@ -176,6 +187,27 @@ public class GameQuickSaveUI : MonoBehaviour
         if ( saveButton != null )
         {
             saveButton.gameObject.SetActive( visible );
+
+            // 标题画面禁用存档按钮：置灰 + 不可交互
+            saveButton.interactable = !isTitle;
+
+            Image bg = saveButton.GetComponent<Image>();
+
+            if ( bg != null )
+            {
+                bg.color = isTitle
+                    ? new Color( 0.20f , 0.20f , 0.22f , 0.7f )
+                    : saveBgNormalColor;
+            }
+
+            Text t = saveButton.transform.Find( "text" ).GetComponent<Text>();
+
+            if ( t != null )
+            {
+                t.color = isTitle
+                    ? new Color( 0.55f , 0.55f , 0.58f , 0.7f )
+                    : saveTextNormalColor;
+            }
         }
 
         if ( loadButton != null )
@@ -255,6 +287,12 @@ public class GameQuickSaveUI : MonoBehaviour
 
     void onSave()
     {
+        // 标题画面没有游戏状态可存，存档按钮已置灰禁用，这里再兜底
+        if ( GameSceneManager.instance.SceneType == GameSceneType.Title )
+        {
+            return;
+        }
+
         bool ok = GameQuickSave.save( currentSlot );
 
         updateSlotStates();

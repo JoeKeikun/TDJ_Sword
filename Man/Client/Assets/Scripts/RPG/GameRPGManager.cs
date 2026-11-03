@@ -348,6 +348,50 @@ public class GameRPGManager : Singleton<GameRPGManager>
 
     }
 
+    /// <summary>
+    /// 修正个别关卡数据里的底图名。
+    /// 第四幕酒店大厅的数据写的是 map04（悬崖外景），实际应该是客栈内景 map01。
+    /// 第五幕城镇数据写的是 map05，但 APK 里同名精灵有两张（古墓 / 远景城镇），
+    /// 导出时保留了古墓图，正确应为远景城镇，单独存为 map05_town。
+    /// </summary>
+    static string getBackgroundName( int stage , string name )
+    {
+        if ( stage == 4 && name.ToLower().Contains( "map04" ) )
+        {
+            return "map01";
+        }
+
+        if ( stage == 5 && name.ToLower().Contains( "map05" ) )
+        {
+            return "map05_town";
+        }
+
+        return name;
+    }
+
+    /// <summary>
+    /// 客栈类底图（2048×2048，内容只占上半部，其下为纯黑留白）的内容底部像素行。
+    /// 返回 0 表示该底图不需要特殊对齐。
+    /// </summary>
+    static float getContentBottom( string name )
+    {
+        string n = name.ToLower();
+
+        // 第一章客栈
+        if ( n.Contains( "map01" ) )
+        {
+            return 1394.0f;
+        }
+
+        // 第四章客栈
+        if ( n.Contains( "map04" ) )
+        {
+            return 1346.0f;
+        }
+
+        return 0.0f;
+    }
+
     public void showLayer( int id )
     {
         string path = GameDefine.getString2( activeID );
@@ -400,12 +444,17 @@ public class GameRPGManager : Singleton<GameRPGManager>
                 }
                 else
                 {
+                    string layerName = activeRPGStage.Layer.L0[ j ].Name;
+
+                    // 第四幕酒店大厅：数据里写的是 map04（悬崖外景），实际应为客栈内景 map01
+                    string bgName = getBackgroundName( activeID , layerName );
+
                     string pathDir = "Texture/Rpg/";
-                    string pathTexture = pathDir + activeRPGStage.Layer.L0[ j ].Name;
+                    string pathTexture = pathDir + bgName;
 
                     GameObject imgObject = Resources.Load<GameObject>( "Prefab/Sprite" );
                     GameObject obj = Instantiate( imgObject , transBackground );
-                    obj.name = activeRPGStage.Layer.L0[ j ].Name;
+                    obj.name = layerName;
 
                     float z = GameDefine.getZ( activeRPGStage.Layer.L0[ j ].Unknow0 );
 
@@ -428,7 +477,7 @@ public class GameRPGManager : Singleton<GameRPGManager>
                     {
                         // 优先使用 APK 未裁切原图：Texture/MapRaw/<Name>
                         // 裁切版存在同名对象互相覆盖的问题，尺寸/内容与原版不一致
-                        sprite.sprite = Resources.Load<Sprite>( "Texture/MapRaw/" + activeRPGStage.Layer.L0[ j ].Name );
+                        sprite.sprite = Resources.Load<Sprite>( "Texture/MapRaw/" + bgName );
                     }
 
                     if ( sprite.sprite == null )
@@ -472,26 +521,39 @@ public class GameRPGManager : Singleton<GameRPGManager>
 
                     if ( sprite.sprite == null )
                     {
-                        Debug.LogError( "[RPGBG] sprite missing " + pathTexture );
+                        string msg = "[RPGBG] sprite missing stage=" + activeID
+                            + " layer=" + layerName + " bg=" + bgName
+                            + " path=" + pathTexture;
+
+                        Debug.LogError( msg );
                     }
-                    else if ( activeRPGStage.Layer.L0[ j ].Name.ToLower().Contains( "map01" ) &&
-                        activeDTL != null )
+                    else
                     {
-                        // 客栈底图（map01）和本关格子数据不是配套的：
-                        // 图片 2048×2048，内容只占上部，第 1394 行以下是纯黑留白，
-                        // 按原逻辑贴格子左上角会让最上面几行落在墙面上。
-                        // 保持原图 1:1 尺寸不缩放，只把内容底部对齐到格子区域底部。
-                        const float CONTENT_BOTTOM_PX = 1394.0f;
+                        // 记录实际命中的底图，便于排查数据里的名字错误
+                        string msg = "[RPGBG] stage=" + activeID
+                            + " layer=" + layerName
+                            + " bg=" + bgName
+                            + " sprite=" + sprite.sprite.name
+                            + " tex=" + sprite.sprite.texture.width + "x" + sprite.sprite.texture.height
+                            + " rect=" + sprite.sprite.rect.width + "x" + sprite.sprite.rect.height;
 
-                        float contentH = CONTENT_BOTTOM_PX / sprite.sprite.pixelsPerUnit;
-                        float gridH = activeDTL.Height * GameDefine.TEXTURE_HEIGHT;
+                        Debug.Log( msg );
 
-                        trans.localScale = Vector3.one;
+                        if ( getContentBottom( bgName ) > 0.0f &&
+                            activeDTL != null )
+                        {
+                            // 客栈类底图和本关格子数据不是配套的：
+                            // 图片 2048×2048，内容只占上部，下部是纯黑留白，
+                            // 按原逻辑贴格子左上角会让最上面几行落在墙面上。
+                            // 保持原图 1:1 尺寸不缩放，只把内容底部对齐到格子区域底部。
+                            float contentH = getContentBottom( bgName ) /
+                                sprite.sprite.pixelsPerUnit;
+                            float gridH = activeDTL.Height * GameDefine.TEXTURE_HEIGHT;
 
-                        trans.localPosition = new Vector3( 0.0f , layerHeight + contentH - gridH , z );
+                            trans.localScale = Vector3.one;
 
-                        Debug.Log( "[RPGBG] map01 keep scale, shiftY=" + ( contentH - gridH ) +
-                            " contentH=" + contentH + " gridH=" + gridH );
+                            trans.localPosition = new Vector3( 0.0f , layerHeight + contentH - gridH , z );
+                        }
                     }
 
                     objsLayer0[ j ] = obj;

@@ -61,12 +61,15 @@ class GameSLUISlot : MonoBehaviour
         color = 1.0f;
     }
 
-    public void setData( GameSaveDataInfo info )
+    public void setData( GameSaveDataInfo info , int index )
     {
-        if ( info.Stage == 0 )
+        // 槽位多了以后显示编号，方便对照存档
+        string slotNo = ( index + 1 ) + ". ";
+
+        if ( info == null || info.Stage == 0 )
         {
             image.gameObject.SetActive( false );
-            text.text = "";
+            text.text = slotNo;
             lvText.text = "";
             Proficiency0.text = "";
             Proficiency1.text = "";
@@ -81,7 +84,7 @@ class GameSLUISlot : MonoBehaviour
         image.gameObject.SetActive( true );
 
         GameBattleStage stage = GameBattleData.instance.getStage( info.Stage );
-        text.text = stage.SDES.Title;
+        text.text = slotNo + stage.SDES.Title;
         lvText.text = GameDefine.getBigInt( info.LV.ToString() );
 
         Proficiency0.text = GameStringData.instance.getString( GameStringType.SL0 );

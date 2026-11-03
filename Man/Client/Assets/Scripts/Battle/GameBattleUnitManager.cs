@@ -444,7 +444,11 @@ public class GameBattleUnitManager : Singleton<GameBattleUnitManager>
 
             if ( stage.XY.Length <= i )
             {
-
+                // 数据里单位和初始坐标数量不一致（第五/六/七幕都少 1 条），
+                // 没有坐标的单位会停在战斗地图原点（屏幕左上角），
+                // 过场里就会凭空多出一个角色。这里直接隐藏，等事件需要时再显示。
+                battleUnit.IsShow = false;
+                battleUnit.updateAlive();
             }
             else
             {

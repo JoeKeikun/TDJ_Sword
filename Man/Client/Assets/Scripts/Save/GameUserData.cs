@@ -1770,8 +1770,18 @@ public class GameUserData : Singleton<GameUserData>
 
     public void loadSaveInfo()
     {
+        // saveInfo 是 SerializeField，场景里序列化的还是 5 槽时代的旧数组，
+        // 实例化时会覆盖字段初始化，长度不够直接越界。这里按当前槽位数强制重建。
+        if ( saveInfo == null || saveInfo.Length != GameDefine.MAX_SAVE )
+        {
+            saveInfo = new GameSaveDataInfo[ GameDefine.MAX_SAVE ];
+        }
+
         for ( int i = 0 ; i < GameDefine.MAX_SAVE ; i++ )
         {
+            // 槽位扩充后，没有存档文件的槽位也必须先分配对象，
+            // 否则访问 saveInfo[i].Stage 会抛空引用
+            saveInfo[ i ] = new GameSaveDataInfo();
             saveInfo[ i ].Stage = 0;
             saveInfo[ i ].LV = 0;
             saveInfo[ i ].Proficiency = 0;
