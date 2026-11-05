@@ -41,6 +41,20 @@ public class GameCampInput : Singleton<GameCampInput>
 
         time += Time.deltaTime;
 
+        // 过场视频（如炼化过场）播放期间，营地输入交给视频播放器，避免误操作营地界面
+        if ( GameMovieManager.instance != null && GameMovieManager.instance.IsPlaying )
+        {
+            if ( confirm || cancel )
+            {
+                confirm = false;
+                cancel = false;
+
+                GameMovieManager.instance.onClick();
+            }
+
+            return;
+        }
+
         updateSLUI();
 
         updateItemUI();

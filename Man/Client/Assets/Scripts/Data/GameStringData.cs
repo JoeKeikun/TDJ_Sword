@@ -240,7 +240,7 @@ public class GameStringData : Singleton<GameStringData>
         addString( "前历再续" );
 
         addString( "0物品已满，物品已放入行囊" );
-        addString( "行囊已满，无法拾取物品" );
+        addString( "行囊已满，无法拾取" );
 
 
         //         addString( File.ReadAllText( Application.dataPath + "/Objects/Help/Help00.txt" , Encoding.UTF8 ) );

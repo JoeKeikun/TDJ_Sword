@@ -25,6 +25,36 @@ public class GameUnitUI : GameUI<GameUnitUI>
         unitUIInfo = transform.Find( "unitInfo" ).GetComponent<GameUnitUIInfo>();
         unitUIItem = transform.Find( "item" ).GetComponent<GameUnitUIItem>();
         unitUISkill = transform.Find( "skill" ).GetComponent<GameUnitUISkill>();
+
+        // 属性页用带「火雷冰幻华冥」属性标签的底图（228×340，与面板 114×170 同比例），
+        // 道具/技能页用空白卷轴，内容由各自子节点绘制
+        setBackground( unitUIInfo , "Texture/Misc/Man_pro_t35" );
+        setBackground( unitUIItem , "Texture/Misc/Man_pro_t1" );
+        setBackground( unitUISkill , "Texture/Misc/Man_pro_t1" );
+    }
+
+    void setBackground( Component panel , string path )
+    {
+        Transform bg = panel.transform.Find( "background" );
+
+        if ( bg == null )
+        {
+            return;
+        }
+
+        Image image = bg.GetComponent<Image>();
+
+        if ( image == null )
+        {
+            return;
+        }
+
+        Sprite sprite = Resources.Load<Sprite>( path );
+
+        if ( sprite != null )
+        {
+            image.sprite = sprite;
+        }
     }
 
     public void showNextUser( bool next )

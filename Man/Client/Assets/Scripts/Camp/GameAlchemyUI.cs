@@ -15,6 +15,10 @@ public class GameAlchemyUI : GameUI<GameAlchemyUI>
 
     Text itemText;
 
+    GameObject forgeMessage;
+    Text forgeMessageText;
+    float forgeMessageTime = 0.0f;
+
     public override void initSingleton()
     {
         bagUI0 = transform.Find( "bag0" ).GetComponent<GameAlchemyUIBag>();
@@ -25,6 +29,27 @@ public class GameAlchemyUI : GameUI<GameAlchemyUI>
 
     void clear()
     {
+        forgeMessageTime = 0.0f;
+
+        if ( forgeMessage != null )
+        {
+            forgeMessage.SetActive( false );
+        }
+    }
+
+    protected override void onUpdate()
+    {
+        if ( forgeMessageTime <= 0.0f )
+        {
+            return;
+        }
+
+        forgeMessageTime -= Time.deltaTime;
+
+        if ( forgeMessageTime <= 0.0f && forgeMessage != null )
+        {
+            forgeMessage.SetActive( false );
+        }
     }
 
     public void updateText()
@@ -110,6 +135,8 @@ public class GameAlchemyUI : GameUI<GameAlchemyUI>
             bagUI0.select( 0 );
 
             showAlchemy( false );
+
+            playForgeMovie( id );
         }
         else
         {
@@ -204,6 +231,109 @@ public class GameAlchemyUI : GameUI<GameAlchemyUI>
         bagUI1.gameObject.SetActive( false );
 
         updateText();
+    }
+
+    // 炼化成功后播放原作的炼化过场（Movie/Forgeite），过场结束后提示获得的物品
+    void playForgeMovie( short id )
+    {
+        GameItem item = GameItemData.instance.getData( id );
+
+        string name = item != null ? item.Name : "";
+
+        if ( GameMovieManager.instance != null )
+        {
+            GameMovieManager.instance.playMovie( "Movie/Forgeite" , delegate { showForgeMessage( name ); } );
+        }
+        else
+        {
+            showForgeMessage( name );
+        }
+    }
+
+    void showForgeMessage( string name )
+    {
+        createForgeMessage();
+
+        forgeMessageText.text = getForgeMessage( name );
+
+        forgeMessage.SetActive( true );
+        forgeMessage.transform.SetAsLastSibling();
+
+        forgeMessageTime = 3.0f;
+    }
+
+    string getForgeMessage( string name )
+    {
+        if ( GameMessageData.instance != null )
+        {
+            GameMessage msg = GameMessageData.instance.getData( GameMessageType.Get1 );
+
+            if ( msg != null && msg.message != null && msg.message.Length > 0 )
+            {
+                string str = msg.message[ 0 ][ 1 ];
+
+                if ( !string.IsNullOrEmpty( str ) )
+                {
+                    return str.Replace( "0" , name );
+                }
+            }
+        }
+
+        return "获得 " + name;
+    }
+
+    // 提示框是运行时拼的（不依赖场景里没有的预制体），样式沿用营地里其它提示的深底金字
+    void createForgeMessage()
+    {
+        if ( forgeMessage != null )
+        {
+            return;
+        }
+
+        forgeMessage = new GameObject( "forgeMessage" , typeof( RectTransform ) );
+
+        forgeMessage.transform.SetParent( transform , false );
+
+        RectTransform rt = forgeMessage.GetComponent<RectTransform>();
+
+        rt.anchorMin = new Vector2( 0.5f , 0.5f );
+        rt.anchorMax = new Vector2( 0.5f , 0.5f );
+        rt.pivot = new Vector2( 0.5f , 0.5f );
+        rt.anchoredPosition = new Vector2( 0.0f , 20.0f );
+        rt.sizeDelta = new Vector2( 300.0f , 56.0f );
+
+        Image background = forgeMessage.AddComponent<Image>();
+
+        background.material = GameMaterial.ui;
+        background.color = new Color( 0.07f , 0.06f , 0.04f , 0.88f );
+        background.raycastTarget = false;
+
+        GameObject textObj = new GameObject( "text" , typeof( RectTransform ) );
+
+        textObj.transform.SetParent( forgeMessage.transform , false );
+
+        RectTransform trans = textObj.GetComponent<RectTransform>();
+
+        trans.anchorMin = Vector2.zero;
+        trans.anchorMax = Vector2.one;
+        trans.offsetMin = new Vector2( 10.0f , 6.0f );
+        trans.offsetMax = new Vector2( -10.0f , -6.0f );
+
+        forgeMessageText = textObj.AddComponent<Text>();
+
+        forgeMessageText.font = Resources.Load<Font>( "Fonts/GameFont" );
+        forgeMessageText.fontSize = 22;
+        forgeMessageText.alignment = TextAnchor.MiddleCenter;
+        forgeMessageText.color = new Color( 1.0f , 0.9f , 0.65f , 1.0f );
+        forgeMessageText.raycastTarget = false;
+
+        Outline outline = textObj.AddComponent<Outline>();
+
+        outline.effectColor = new Color( 0.0f , 0.0f , 0.0f , 0.85f );
+        outline.effectDistance = new Vector2( 1.0f , -1.0f );
+        outline.useGraphicAlpha = true;
+
+        forgeMessage.SetActive( false );
     }
 
 

@@ -119,6 +119,12 @@ public class GameAnimation : MonoBehaviour
 
     public Vector2 pivot = new Vector2( 0.0f , 1.0f );
 
+    /// <summary>
+    /// 场景类动画（客栈房间等剧情叠层）设为 true：火光/光源层（type2 且 unknow10==16）
+    /// 会压到人物层下面，只盖住房间底图，避免光球糊在人物身上。
+    /// </summary>
+    public bool lightBehindCharacters = false;
+
     [ SerializeField]
     Color color = Color.white;
 
@@ -789,6 +795,15 @@ public class GameAnimation : MonoBehaviour
                     trans.localPosition = new Vector3( saf1[ f ].saf11[ i ].textureX + offsetX ,
                     -saf1[ f ].saf11[ i ].textureY + offsetY ,
                     i );
+                }
+                else if ( lightBehindCharacters &&
+                    type == 2 &&
+                    saf1[ f ].saf11[ i ].unknow10 == 16 )
+                {
+                    // 火光/光源层：放在房间底图(层0, z=0)和人物层(z=-i, i>=1)之间
+                    trans.localPosition = new Vector3( saf1[ f ].saf11[ i ].textureX + offsetX ,
+                    -saf1[ f ].saf11[ i ].textureY + offsetY ,
+                    -0.5f );
                 }
 
                 if ( saf1[ f ].saf11[ i ].textureType == 2 &&

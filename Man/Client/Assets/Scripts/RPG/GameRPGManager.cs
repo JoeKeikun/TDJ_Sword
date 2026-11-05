@@ -351,8 +351,11 @@ public class GameRPGManager : Singleton<GameRPGManager>
     /// <summary>
     /// 修正个别关卡数据里的底图名。
     /// 第四幕酒店大厅的数据写的是 map04（悬崖外景），实际应该是客栈内景 map01。
-    /// 第五幕城镇数据写的是 map05，但 APK 里同名精灵有两张（古墓 / 远景城镇），
-    /// 导出时保留了古墓图，正确应为远景城镇，单独存为 map05_town。
+    /// 城镇类关卡（5、7、9 幕）的数据都写 map05，但 APK 里同名精灵有两张
+    /// （古墓 2048×2048 / 远景城镇 4096×1024），导出时 map05 保留了古墓图，
+    /// 正确应为远景城镇，单独存为 map05_town，因此这里按名字统一替换。
+    /// 第 26 幕同样是同名冲突（战斗用 map26 4096×2048 / 剧情城镇 4096×1024），
+    /// 剧情城镇单独存为 map26_town。
     /// </summary>
     static string getBackgroundName( int stage , string name )
     {
@@ -361,9 +364,14 @@ public class GameRPGManager : Singleton<GameRPGManager>
             return "map01";
         }
 
-        if ( stage == 5 && name.ToLower().Contains( "map05" ) )
+        if ( name.ToLower().Contains( "map05" ) )
         {
             return "map05_town";
+        }
+
+        if ( name.ToLower().Contains( "map26" ) )
+        {
+            return "map26_town";
         }
 
         return name;
@@ -437,6 +445,7 @@ public class GameRPGManager : Singleton<GameRPGManager>
                     trans.localScale = new Vector3( 5.0f , 5.0f , 5.0f );
 
                     GameAnimation animation = obj.GetComponent<GameAnimation>();
+                    animation.lightBehindCharacters = true;
 
                     animation.playAnimation();
 
@@ -586,6 +595,7 @@ public class GameRPGManager : Singleton<GameRPGManager>
                 trans.localScale = new Vector3( 1.0f , 1.0f , 1.0f );
 
                 GameAnimation animation = obj.GetComponent<GameAnimation>();
+                animation.lightBehindCharacters = true;
 
                 if ( activeRPGStage.Layer.L1[ j ].Unknow5 == 0 )
                 {
@@ -702,10 +712,14 @@ public class GameRPGManager : Singleton<GameRPGManager>
 
                 GameObject obj = Instantiate<GameObject>( Resources.Load<GameObject>( path ) );
                 ani = obj.GetComponent<GameAnimation>();
+                ani.lightBehindCharacters = true;
 
                 Transform trans = obj.transform;
                 trans.SetParent( transEvent );
-                trans.localPosition = new Vector3( 0.0f , layerHeight , 0.0f );
+                // 事件动画也要用 L1 里的偏移（与 showLayer 的摆放规则一致），
+                // 否则客栈房间等剧情叠层会被顶到屏幕上方，左上角只露出人物/火光的一截
+                trans.localPosition = new Vector3( activeRPGStage.Layer.L1[ i ].OffsetX ,
+                    -activeRPGStage.Layer.L1[ i ].OffsetY + layerHeight , 0.0f );
                 trans.localScale = new Vector3( 1.0f , 1.0f , 1.0f );
 
                 animations.Add( str , ani );
